@@ -1,0 +1,149 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7371929522323037295
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8887151076870104836}
+  m_Layer: 0
+  m_Name: Teaset_CoffeeGrinder_01_Prefab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!4 &8887151076870104836
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7371929522323037295}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2566014694223921042}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &2600522818300631161
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8887151076870104836}
+    m_Modifications:
+    - target: {fileID: -8907290428016050886, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_RootOrder
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7640886477168131252, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 126
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_Name
+      value: Teaset_CoffeeGrinder_01_Mesh
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_Size
+      value: 0.96
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_FadeMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_AnimateCrossFading
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_LODs.Array.data[0].screenRelativeHeight
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_LODs.Array.data[1].screenRelativeHeight
+      value: 0.125
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_LODs.Array.data[2].screenRelativeHeight
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 5215910787256940941, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 126
+      objectReference: {fileID: 0}
+    - target: {fileID: 7641732987547418183, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      propertyPath: m_ReceiveGI
+      value: 2
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 3559166515924254806, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+    - {fileID: -7348596014792713933, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7139476178633172998}
+  m_SourcePrefab: {fileID: 100100000, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+--- !u!4 &2566014694223921042 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+  m_PrefabInstance: {fileID: 2600522818300631161}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2942962067739927848 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 4c1acba7788f23c43a7ee965c2f8360b, type: 3}
+  m_PrefabInstance: {fileID: 2600522818300631161}
+  m_PrefabAsset: {fileID: 0}
+--- !u!136 &7139476178633172998
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2942962067739927848}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 0
+  serializedVersion: 2
+  m_Radius: 0.08129221
+  m_Height: 0.3372357
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.14825955, z: 0}

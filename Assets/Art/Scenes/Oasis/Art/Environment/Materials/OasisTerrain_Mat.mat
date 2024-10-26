@@ -1,0 +1,243 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-2537230577267339321
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 7
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OasisTerrain_Mat
+  m_Shader: {fileID: -6465566751694194690, guid: 943758cc600df734d9e8319d784c2acd, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Detail_Grain_Normal:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Dust_Wave_Normal:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Glitter_Clip_Mask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Glitter_Mask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Gravels_Color_Smoothness:
+        m_Texture: {fileID: 2800000, guid: 07a6d0e57a3ecf045a4c126e11857e16, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Gravels_Height:
+        m_Texture: {fileID: 2800000, guid: b128d0b2d9458594d9bde76b60a3ed55, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Gravels_Normal:
+        m_Texture: {fileID: 2800000, guid: 114613880df28a04cb2987db9ae3b717, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer2_Height:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer2_Packed:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer3_Height:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer3_Packed:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SampleTexture2D_5a22baadb0a04fc8a6cd9ce0a5aac1d4_Texture_1_Texture2D:
+        m_Texture: {fileID: 2800000, guid: 4d58dccd557d3bf4681ce0efdfd3fb6a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SampleTexture2D_acc6d1f533db4de48f1d8a0a83301fdf_Texture_1_Texture2D:
+        m_Texture: {fileID: 2800000, guid: 4d58dccd557d3bf4681ce0efdfd3fb6a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sand_Footsteps_Packed:
+        m_Texture: {fileID: 2800000, guid: ef302b0aa7c8c1546b18ba8d2997240a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sand_Harsh_Packed:
+        m_Texture: {fileID: 2800000, guid: 582f70da1a84c5c41b638f85f4458eb2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sand_Smooth_Packed:
+        m_Texture: {fileID: 2800000, guid: d4e1a77baa8a285428b02b86ec3a0d73, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sand_Smooth_Packed_Texture:
+        m_Texture: {fileID: 2800000, guid: d4e1a77baa8a285428b02b86ec3a0d73, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sands_Height:
+        m_Texture: {fileID: 2800000, guid: a5467f927ef5f5b41945dc3ae87d6f08, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SpecGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 0
+    - _AlphaToMask: 0
+    - _Blend: 0
+    - _BlendModePreserveSpecular: 1
+    - _BumpScale: 1
+    - _ClearCoatMask: 0
+    - _ClearCoatSmoothness: 0
+    - _Cull: 2
+    - _Cutoff: 0.5
+    - _DetailAlbedoMapScale: 1
+    - _DetailNormalMapScale: 1
+    - _Detail_Distance: 10
+    - _Detail_Grain_On: 0
+    - _Detail_Grain_Strength: 0
+    - _DstBlend: 0
+    - _DstBlendAlpha: 0
+    - _Dust_Wave: 0
+    - _Dust_Wave_Speed: 0
+    - _Dust_Wave_Strength: 1
+    - _EnvironmentReflections: 1
+    - _Fade_Distance: 100
+    - _Fresnel_Power: 1.45
+    - _Glitter_On: 1
+    - _Glitter_Strength: 0
+    - _Glitter_Strength_in_Shadow: 0.4
+    - _GlossMapScale: 0
+    - _Glossiness: 0
+    - _GlossyReflections: 0
+    - _Gravels_Height_Offset: 0.158
+    - _Layer2_Normal_Intensity: 1
+    - _Layer3_Normal_Intensity: 1
+    - _Mask_Fuziness: 0.24
+    - _Mask_Range: 1.09
+    - _Metallic: 0
+    - _Moving_Dust: 0
+    - _Moving_Dust_Strength: 1
+    - _OcclusionStrength: 1
+    - _Parallax: 0.005
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _ReceiveShadows: 1
+    - _SmoothFade: 0.5
+    - _Smoothness: 0.5
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _SrcBlendAlpha: 1
+    - _Surface: 0
+    - _Wet_Gravels_Darkening: 0.367
+    - _Wet_Gravels_Normal_Intensity: 1
+    - _Wet_Gravels_Smoothness: 0
+    - _WorkflowMode: 1
+    - _ZWrite: 1
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Detail_Grain_Tiling: {r: 1, g: 1, b: 0, a: 0}
+    - _Dust_Normal_Tiling: {r: 0.5, g: 0.86, b: 0, a: 0}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Giltter_Tiling: {r: 5, g: 5, b: 0, a: 0}
+    - _Glitter_Color: {r: 1, g: 1, b: 1, a: 0}
+    - _Gravels_Height_Remap: {r: -0.2, g: 1, b: 0, a: 0}
+    - _Layer2_Dark_Color: {r: 0, g: 0, b: 0, a: 0}
+    - _Layer2_Highlight_Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Layer2_Offset: {r: 0, g: 0, b: 0, a: 0}
+    - _Layer2_Tiling: {r: 1, g: 1, b: 0, a: 0}
+    - _Layer3_Dark_Color: {r: 0, g: 0, b: 0, a: 0}
+    - _Layer3_Highlight_Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Layer3_Offset: {r: 0, g: 0, b: 0, a: 0}
+    - _Layer3_Tiling: {r: 1, g: 1, b: 0, a: 0}
+    - _Moving_Dust_Offset_Speed: {r: 1.32, g: 0.78, b: 0, a: 0}
+    - _Sand_Dark_Color: {r: 0.4862745, g: 0.30349493, b: 0.14636862, a: 0.7843137}
+    - _Sand_Highlight_Color: {r: 0.936, g: 0.7524706, b: 0.5322353, a: 0.6862745}
+    - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+  m_BuildTextureStacks: []

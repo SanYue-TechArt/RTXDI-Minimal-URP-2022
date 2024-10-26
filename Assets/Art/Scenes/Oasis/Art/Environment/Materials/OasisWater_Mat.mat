@@ -1,0 +1,112 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8750803315563209233
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 7
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OasisWater_Mat
+  m_Shader: {fileID: -6465566751694194690, guid: dd152f2faaf084b4a87adf76c5672e5c, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _RECEIVE_SHADOWS_OFF
+  - _SURFACE_TYPE_TRANSPARENT
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses:
+  - DepthOnly
+  - SHADOWCASTER
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Blend_Map:
+        m_Texture: {fileID: 2800000, guid: 202102724a9170f4580890744f2af4e4, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Normal_Map:
+        m_Texture: {fileID: 2800000, guid: dd444bbd1a5706d44a4dd972e16eeb37, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 0
+    - _AlphaToMask: 0
+    - _BaseColorFactor: 0
+    - _Blend: 0
+    - _BlendModePreserveSpecular: 0
+    - _BlendTiling: 0.04
+    - _BrighterColor: 0
+    - _CastShadows: 0
+    - _ColorAlpha: 0.557
+    - _ColorThickness: 1
+    - _Cull: 2
+    - _DstBlend: 10
+    - _EdgeColorStrength: 1
+    - _EdgeFade: 0.588
+    - _Float: -1.6
+    - _Metallic: 1
+    - _NormalMapStrength: 0.1
+    - _NormalMapStrength_1: 1
+    - _NormalMapStrength_2: 1
+    - _NormalMapStrength_3: 1
+    - _NormalTiling: 1
+    - _NormalTiling1: 0.004
+    - _NormalTiling2: 0.01
+    - _OffsetSpeed: 0.007
+    - _QueueControl: 1
+    - _QueueOffset: 0
+    - _ReceiveShadows: 0
+    - _RefractionDepth: 1
+    - _RefractionIntensity: 0.09
+    - _SrcBlend: 5
+    - _Surface: 1
+    - _ThicknessPower: 1
+    - _WorkflowMode: 1
+    - _ZTest: 4
+    - _ZWrite: 0
+    - _ZWriteControl: 0
+    m_Colors:
+    - _BlendOffsetSpeed: {r: 0.1, g: 0.1, b: 0, a: 0}
+    - _Color: {r: 0.11372546, g: 0.47896016, b: 0.62352943, a: 0}
+    - _Color2: {r: 0.09545211, g: 0.31132078, b: 0.25649697, a: 0}
+    - _ColorBright: {r: 0.17254904, g: 0.34394622, b: 0.3529412, a: 0}
+    - _ColorDark: {r: 0.09545211, g: 0.31132078, b: 0.25649697, a: 0}
+    - _ColorDeep: {r: 0.21877201, g: 0.34158185, b: 0.354, a: 1}
+    - _EdgeColor: {r: 0.4594755, g: 0.57582647, b: 0.6037736, a: 0}
+    - _RefractionFade: {r: 0, g: 10, b: 0, a: 0}
+    - _WaterDepthRange: {r: 0, g: 10, b: 0, a: 0}
+  m_BuildTextureStacks: []
