@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
   m_Name: FullscreenMask
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     passTag: FullscreenMask
     Event: 450
@@ -54,7 +54,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0ec52cecc795714f93f274c2e71e87b, type: 3}
   m_Name: GlobalVolumeFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   _baseProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
@@ -76,7 +76,8 @@ MonoBehaviour:
   - {fileID: 7833122117494664109}
   - {fileID: 3573653513797426673}
   - {fileID: -3751262535411419207}
-  m_RendererFeatureMap: a163f70a5ce289f0ad6b866f10d7b46cf1dd38d0ef2a9831b937925d99d6f0cb
+  - {fileID: 1146996726508187043}
+  m_RendererFeatureMap: a163f70a5ce289f0ad6b866f10d7b46cf1dd38d0ef2a9831b937925d99d6f0cba36d0e1a72f3ea0f
   m_UseNativeRenderPass: 1
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -111,10 +112,24 @@ MonoBehaviour:
     zFailOperation: 0
   m_ShadowTransparentReceive: 1
   m_RenderingMode: 1
-  m_DepthPrimingMode: 2
-  m_CopyDepthMode: 1
+  m_DepthPrimingMode: 1
+  m_CopyDepthMode: 0
   m_AccurateGbufferNormals: 1
   m_IntermediateTextureMode: 0
+--- !u!114 &1146996726508187043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f5cfdf736f8f10448c844392e793add, type: 3}
+  m_Name: RTXDIMinimalFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  DebugLightData: 0
 --- !u!114 &3573653513797426673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -127,7 +142,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1614fc811f8f184697d9bee70ab9fe5, type: 3}
   m_Name: DecalRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   m_Settings:
     technique: 1
     maxDrawDistance: 1000
@@ -154,13 +169,13 @@ MonoBehaviour:
   m_Settings:
     AOMethod: 0
     Downsample: 0
-    AfterOpaque: 0
+    AfterOpaque: 1
     Source: 1
     NormalSamples: 1
     Intensity: 0.4
     DirectLightingStrength: 0.25
     Radius: 0.3
-    Samples: 1
+    Samples: 0
     BlurQuality: 0
     Falloff: 100
     SampleCount: -1

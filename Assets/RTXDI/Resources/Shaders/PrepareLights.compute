@@ -1,0 +1,89 @@
+#pragma kernel PrepareLights
+
+#include "Packages/com.unity.render-pipelines.universal@14.0.9/ShaderLibrary/Core.hlsl"
+#include "Packing.hlsl"
+#include "ShaderParameters.hlsl"
+#include "TriangleLight.hlsl"
+
+uint numTasks;
+
+StructuredBuffer<PrepareLightsTask>     TaskBuffer;
+StructuredBuffer<TriangleLightVertex>   LightVertexBuffer;
+StructuredBuffer<int>                   LightIndexBuffer;
+RWStructuredBuffer<RAB_LightInfo>       LightDataBuffer;
+
+bool FindTask(uint dispatchThreadId, out PrepareLightsTask task)
+{
+    // Use binary search to find the task that contains the current thread's output index:
+    //   task.lightBufferOffset <= dispatchThreadId < (task.lightBufferOffset + task.triangleCount)
+
+    int left = 0;
+    int right = int(numTasks) - 1;
+
+    while (right >= left)
+    {
+        int middle = (left + right) / 2;
+        task = TaskBuffer[middle];
+
+        int tri = int(dispatchThreadId) - int(task.lightBufferOffset); // signed
+
+        if (tri < 0)
+        {
+            // Go left
+            right = middle - 1;
+        }
+        else if (tri < task.triangleCount)
+        {
+            // Found it!
+            return true;
+        }
+        else
+        {
+            // Go right
+            left = middle + 1;
+        }
+    }
+
+    return false;
+}
+
+// 每个线程要处理一个三角形（一次性从global vertex buffer里拿出三个顶点）
+[numthreads(256, 1, 1)]
+void PrepareLights (uint dispatchThreadId : SV_DispatchThreadID, uint groupThreadId : SV_GroupThreadID)
+{
+    // 每一个task处理的是一个polymorphic light，这意味着一个task内会包含多个三角形
+    PrepareLightsTask task = (PrepareLightsTask)0;
+
+    // 每个线程（三角形）都需要找到属于自己的那一个task
+    if (!FindTask(dispatchThreadId, task))
+        return;
+
+    uint triangleIdx = dispatchThreadId;
+
+    RAB_LightInfo lightInfo = (RAB_LightInfo)0;
+
+    {
+        int indices[3];
+        indices[0] = LightIndexBuffer[3 * triangleIdx + 0];
+        indices[1] = LightIndexBuffer[3 * triangleIdx + 1];
+        indices[2] = LightIndexBuffer[3 * triangleIdx + 2];
+        
+        TriangleLightVertex vertices[3];
+        vertices[0] = LightVertexBuffer[task.lightBufferOffset + indices[0]];
+        vertices[1] = LightVertexBuffer[task.lightBufferOffset + indices[1]];
+        vertices[2] = LightVertexBuffer[task.lightBufferOffset + indices[2]];
+
+        float3 radiance = max(task.emissiveColor, 0.0f);
+
+        TriangleLight triLight;
+        triLight.base = vertices[0].position;
+        triLight.edge1 = vertices[1].position - vertices[0].position;
+        triLight.edge2 = vertices[2].position - vertices[0].position;
+        triLight.radiance = radiance;
+
+        lightInfo = triLight.Store();
+    }
+
+    uint lightBufferPtr = dispatchThreadId;
+    LightDataBuffer[lightBufferPtr] = lightInfo;
+}
