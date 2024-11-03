@@ -24,6 +24,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         private GraphicsBuffer _light_task_buffer_gpu = null;
         private GraphicsBuffer _light_data_buffer_gpu = null;
 
+        private GraphicsBuffer _triangle_light_debug_buffer_gpu = null;
+
         [StructLayout(LayoutKind.Sequential)]
         public struct PrepareLightsTask
         {
@@ -43,7 +45,20 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             public uint2 radiance; // fp16x4
             public uint direction1; // oct-encoded
             public uint direction2; // oct-encoded
+            
+            public Vector4 debug;
         };
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TriangleLightDebug
+        {
+            public Vector3 basePoint;
+            public Vector3 v1;
+            public Vector3 v2;
+            public Vector3 edge1;
+            public Vector3 edge2;
+            public Vector3 radiance;
+        }
         
         private Vector3 octToNdirSigned(Vector2 p)
         {
@@ -175,6 +190,10 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                     _light_data_buffer_gpu?.Release();
                     _light_data_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3,
                         sizeof(RAB_LightInfo));
+                    
+                    _triangle_light_debug_buffer_gpu?.Release();
+                    _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
+                        total_index_count / 3, sizeof(TriangleLightDebug));
 
                     prepare_polymorphic_light = true;
                 }
@@ -195,6 +214,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                 cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.LightIndexBuffer, _merged_index_buffer_gpu);
                 cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.TaskBuffer, _light_task_buffer_gpu);
                 cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.LightDataBuffer, _light_data_buffer_gpu);
+                cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, "TriangleLightDebugBuffer", _triangle_light_debug_buffer_gpu);
                 cmd.DispatchCompute(_prepare_light_cs, _prepare_light_kernel,
                     Mathf.CeilToInt((float)light_buffer_offset / 256), 1, 1);
             }
@@ -205,28 +225,57 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         public override void FrameCleanup(CommandBuffer cmd)
         {
-            if (DebugLightDataBuffer)
-            {
-                if (_light_data_buffer_gpu == null)
-                {
-                    Debug.Log("light data buffer gpu is null");
-                    return;
-                }
-                
-                var light_data_cpu = new RAB_LightInfo[_light_data_buffer_gpu.count];
-                _light_data_buffer_gpu.GetData(light_data_cpu);
-
-                foreach (var data in light_data_cpu)
-                {
-                    var msg = $"center={data.center}, direction1={octToNdirUnorm32(data.direction1)}, radiance={Unpack_R16G16B16A16_FLOAT(data.radiance)}";
-                    Debug.Log(msg);
-                }
-            }
+            if (DebugLightDataBuffer) OutputLightDataStr();
         }
 
         public void Release()
         {
             
+        }
+
+        private void OutputLightDataStr()
+        {
+            if (_light_data_buffer_gpu == null)
+            {
+                Debug.Log("light data buffer gpu is null");
+                return;
+            }
+
+            /*{
+                var light_data_cpu = new RAB_LightInfo[_light_data_buffer_gpu.count];
+                _light_data_buffer_gpu.GetData(light_data_cpu);
+
+                var msg = "";
+                var idx = 1;
+                foreach (var data in light_data_cpu)
+                {
+                    msg += $"triangle{idx}: center={data.center}, direction1={octToNdirUnorm32(data.direction1)}, " +
+                           $"direction2={octToNdirUnorm32(data.direction2)}, scalars1={math.f16tof32(data.scalars)}, scalars2={math.f16tof32(data.scalars >> 16)}, " +
+                           $"radiance={Unpack_R16G16B16A16_FLOAT(data.radiance)}, debug={data.debug}\n\n";
+                    idx += 1;
+                }
+                Debug.Log(msg);
+            }*/
+
+            {
+                var triangle_light_debug_cpu = new TriangleLightDebug[_triangle_light_debug_buffer_gpu.count];
+                _triangle_light_debug_buffer_gpu.GetData(triangle_light_debug_cpu);
+
+                var msg = "";
+                var idx = 1;
+                foreach (var triangle in triangle_light_debug_cpu)
+                {
+                    msg += $"triangle{idx}: base={triangle.basePoint}, v1={triangle.v1}, v2={triangle.v2}," +
+                           $" edge1={triangle.edge1}, edge2={triangle.edge2}, radiance={triangle.radiance}\n\n";
+                    idx += 1;
+                }
+                Debug.Log(msg);
+
+                // TODO: unity console不支持输出小数点后第三位数，以下变量将输出为 (0.01, 0.01, 0.01)
+                // 本例中使用的边长为1cm（0.01m in unity）的正方体的vertex position实际上是(0.005,0.005,0.005)，但输出只会变成(0.01, 0.01, 0.01)
+                var point = new Vector3(0.005f, 0.005f, 0.005f);
+                Debug.Log(point);
+            }
         }
     }
     

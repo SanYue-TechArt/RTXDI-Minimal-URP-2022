@@ -29,6 +29,8 @@ struct RAB_LightInfo
     uint2 radiance; // fp16x4
     uint direction1; // oct-encoded
     uint direction2; // oct-encoded
+
+    float4 debug;
 };
 
 #endif
