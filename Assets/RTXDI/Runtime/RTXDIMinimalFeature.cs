@@ -172,30 +172,25 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                     }
          
                     // 将合并后的cpu灯光数据上载到gpu
-                    _merged_vertex_buffer_gpu?.Release();
                     _merged_vertex_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_vertex_count,
                         sizeof(PolymorphicLight.TriangleLightVertex));
                     _merged_vertex_buffer_gpu.SetData(merged_vertex_buffer_cpu);
                     
-                    _merged_index_buffer_gpu?.Release();
                     _merged_index_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count,
                         sizeof(int));
                     _merged_index_buffer_gpu.SetData(merged_index_buffer_cpu);
                     
-                    _light_task_buffer_gpu?.Release();
                     _light_task_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, tasks.Count,
                         sizeof(PrepareLightsTask));
                     _light_task_buffer_gpu.SetData(tasks);
                     
-                    _light_data_buffer_gpu?.Release();
                     _light_data_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3,
                         sizeof(RAB_LightInfo));
                     
-                    _triangle_light_debug_buffer_gpu?.Release();
                     _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
                         total_index_count / 3, sizeof(TriangleLightDebug));
 
-                    prepare_polymorphic_light = true;
+                    prepare_polymorphic_light = true; 
                 }
                 else
                 {
@@ -226,6 +221,12 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         public override void FrameCleanup(CommandBuffer cmd)
         {
             if (DebugLightDataBuffer) OutputLightDataStr();
+            
+            SafeReleaseGraphicsBuffer(ref _merged_vertex_buffer_gpu);
+            SafeReleaseGraphicsBuffer(ref _merged_index_buffer_gpu);
+            SafeReleaseGraphicsBuffer(ref _light_task_buffer_gpu);
+            SafeReleaseGraphicsBuffer(ref _light_data_buffer_gpu);
+            SafeReleaseGraphicsBuffer(ref _triangle_light_debug_buffer_gpu);
         }
 
         public void Release()
@@ -276,6 +277,12 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                 var point = new Vector3(0.005f, 0.005f, 0.005f);
                 Debug.Log(point);
             }
+        }
+
+        private void SafeReleaseGraphicsBuffer(ref GraphicsBuffer buffer)
+        {
+            buffer?.Release();
+            buffer = null;
         }
     }
     
@@ -369,7 +376,9 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
     {
         // 获取当前使用的rp asset
         var rp_asset = GraphicsSettings.renderPipelineAsset;
-        
+        // 有时Graphics面板里可能没有设置rp asset，此时尝试从Quality面板内获取
+        if (rp_asset == null) rp_asset = QualitySettings.renderPipeline;
+
         // 尝试转换为URP Asset，不成功则返回null
         if (rp_asset == null || !(rp_asset is UniversalRenderPipelineAsset)) return null;
         
