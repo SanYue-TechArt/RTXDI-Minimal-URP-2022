@@ -2,8 +2,7 @@
 
 #define RTXDI_ENABLE_PRESAMPLING 0
 
-[shader("raygeneration")]
-void MyRaygenShader()
-{
+#include "RtxdiApplicationBridge.hlsl"
+#include "InitialSamplingFunctions.hlsl"
 
-}
+#include "DiRenderRayGen.hlsl"

@@ -1,6 +1,7 @@
 #ifndef RTXDI_MINIMAL_TRIANGLE_LIGHT
 #define RTXDI_MINIMAL_TRIANGLE_LIGHT
 
+#include "Packing.hlsl"
 #include "HelperFunctions.hlsl"
 
 struct RAB_LightSample

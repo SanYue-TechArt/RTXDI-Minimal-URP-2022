@@ -1,7 +1,7 @@
 #ifndef RTXDI_MINIMAL_RESTIR_DI_PARAMETERS
 #define RTXDI_MINIMAL_RESTIR_DI_PARAMETERS
 
-#include "RtxdiMath.hlsl"
+#include "RtxdiParameters.hlsl"
 
 struct ReSTIRDI_BufferIndices
 {

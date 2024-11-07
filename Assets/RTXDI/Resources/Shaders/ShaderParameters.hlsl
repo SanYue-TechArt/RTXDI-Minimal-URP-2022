@@ -1,6 +1,8 @@
 #ifndef RTXDI_MINIMAL_SHADER_PARAMETERS
 #define RTXDI_MINIMAL_SHADER_PARAMETERS
 
+#include "ReSTIRDIParameters.hlsl"
+
 struct TriangleLightVertex
 {
     float3 position;
@@ -14,6 +16,27 @@ struct PrepareLightsTask
     float3  emissiveColor;
     uint    triangleCount;
     uint    lightBufferOffset;
+};
+
+struct ResamplingConstants
+{
+    RTXDI_RuntimeParameters runtimeParams;
+    RTXDI_LightBufferParameters lightBufferParams;
+    RTXDI_ReservoirBufferParameters restirDIReservoirBufferParams;
+
+    uint frameIndex;
+    uint numInitialSamples;
+    uint numSpatialSamples;
+    uint pad1;
+
+    uint numInitialBRDFSamples;
+    float brdfCutoff;
+    uint2 pad2;
+
+    uint enableResampling;
+    uint unbiasedMode;
+    uint inputBufferIndex;
+    uint outputBufferIndex;
 };
 
 /**
