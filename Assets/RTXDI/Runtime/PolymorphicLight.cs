@@ -7,19 +7,22 @@ using UnityEngine.Rendering;
 [ExecuteAlways]
 public class PolymorphicLight : MonoBehaviour
 {
-    public bool IsValid() => _mesh_Filter != null && _mesh_Filter.sharedMesh != null;
+    public bool IsValid() => _mesh_filter != null && _mesh_filter.sharedMesh != null && _mesh_renderer != null;
 
     [CanBeNull]
-    public Mesh GetMesh() => IsValid() ? _mesh_Filter.sharedMesh : null;
+    public Mesh GetMesh() => IsValid() ? _mesh_filter.sharedMesh : null;
 
     public Vector3 GetLightColor() => new Vector3(LightColor.r, LightColor.g, LightColor.b) * LightIntensity;
+
+    [CanBeNull]
+    public MeshRenderer GetMeshRenderer() => _mesh_renderer;
 
     public bool IsVertexAttributeAvailable()
     {
         if (!IsValid()) return false;
 
         var result = true;
-        var mesh = _mesh_Filter.sharedMesh;
+        var mesh = _mesh_filter.sharedMesh;
         var attributes = mesh.GetVertexAttributes();
         result &= attributes.Length == 4;
         result &= mesh.HasVertexAttribute(VertexAttribute.Position);
@@ -47,7 +50,7 @@ public class PolymorphicLight : MonoBehaviour
     {
         if (!IsValid() || !IsVertexAttributeAvailable()) return null;
 
-        var mesh = _mesh_Filter.sharedMesh;
+        var mesh = _mesh_filter.sharedMesh;
         var buffer = new TriangleLightVertex[mesh.vertexCount];
         // 下列代码可能造成内存泄漏，最好用临时变量接管Vertex Buffer并手动释放
         // mesh.GetVertexBuffer(0).GetData(buffer);
@@ -60,19 +63,19 @@ public class PolymorphicLight : MonoBehaviour
     }
     
     [CanBeNull]
-    public GraphicsBuffer GetGpuVertexBuffer() => IsValid() ? _mesh_Filter.sharedMesh.GetVertexBuffer(0) : null;
+    public GraphicsBuffer GetGpuVertexBuffer() => IsValid() ? _mesh_filter.sharedMesh.GetVertexBuffer(0) : null;
 
     [CanBeNull]
     public int[] GetCpuIndexBuffer()
     {
         if (!IsValid() || !IsVertexAttributeAvailable()) return null;
         
-        var mesh = _mesh_Filter.sharedMesh;
+        var mesh = _mesh_filter.sharedMesh;
         return mesh.GetIndices(0);
     }
     
     [CanBeNull]
-    public GraphicsBuffer GetGpuIndexBuffer() => IsValid() ? _mesh_Filter.sharedMesh.GetIndexBuffer() : null;
+    public GraphicsBuffer GetGpuIndexBuffer() => IsValid() ? _mesh_filter.sharedMesh.GetIndexBuffer() : null;
 
     #endregion
 
@@ -133,15 +136,16 @@ public class PolymorphicLight : MonoBehaviour
     [Range(0.0f, 10.0f)]
     public float LightIntensity = 1.0f;
 
-    private MeshFilter _mesh_Filter;
+    private MeshFilter _mesh_filter;
+    private MeshRenderer _mesh_renderer;
 
     void OnEnable()
     {
-        _mesh_Filter = gameObject.GetComponent<MeshFilter>();
-        if (!IsValid()) return;
-        
-        DebugCpuVertexBuffer();
-        DebugCpuIndexBuffer();
+        _mesh_filter = gameObject.GetComponent<MeshFilter>();
+        _mesh_renderer = gameObject.GetComponent<MeshRenderer>();
+
+        /*DebugCpuVertexBuffer();
+        DebugCpuIndexBuffer();*/
     }
 
     void Update()

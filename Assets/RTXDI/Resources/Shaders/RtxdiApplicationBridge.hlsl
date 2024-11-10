@@ -2,7 +2,7 @@
 #define RTXDI_MINIMAL_RAB
 
 #include "Packages/com.unity.render-pipelines.universal@14.0.9/ShaderLibrary/Core.hlsl"
-#include "Packages/com.unity.render-pipelines.universal@14.0.9/ShaderLibrary/Lighting.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/Shaders/Utils/Deferred.hlsl"
 #include "ShaderParameters.hlsl"
 
 RWStructuredBuffer<RTXDI_PackedDIReservoir> LightReservoirBuffer;
@@ -12,7 +12,20 @@ RWStructuredBuffer<RTXDI_PackedDIReservoir> LightReservoirBuffer;
 RWStructuredBuffer<ResamplingConstants> ResampleConstants;
 #define g_Const ResampleConstants[0]
 
+// 光照结果
+RWTexture2D<float4> ShadingOutput;
+RWStructuredBuffer<RTXDI_PackedDIReservoir> LightReservoirs;
+
 StructuredBuffer<RAB_LightInfo> LightDataBuffer;
+
+RaytracingAccelerationStructure PolymorphicLightTLAS;
+
+StructuredBuffer<uint> GeometryInstanceToLight;
+
+TEXTURE2D_X(_CameraDepthTexture);
+TEXTURE2D_X(_GBuffer0);
+TEXTURE2D_X(_GBuffer1);
+TEXTURE2D_X(_GBuffer2);
 
 #include "TriangleLight.hlsl"
 
@@ -67,6 +80,51 @@ float ImportanceSampleGGX_VNDF_PDF(float roughness, float3 N, float3 V, float3 L
     return (VoH > 0.0) ? D / (4.0 * VoH) : 0.0;
 }
 
+float2 SampleDisk(float2 random)
+{
+    float angle = 2 * PI * random.x;
+    return float2(cos(angle), sin(angle)) * sqrt(random.y);
+}
+
+float3 SampleCosHemisphere(float2 random, out float solidAnglePdf)
+{
+    float2 tangential = SampleDisk(random);
+    float elevation = sqrt(saturate(1.0 - random.y));
+
+    solidAnglePdf = elevation / PI;
+
+    return float3(tangential.xy, elevation);
+}
+// ----------------- End BSDF -----------------
+
+// Constructs an orthonormal basis based on the provided normal.
+// https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+void ConstructONB(float3 normal, out float3 tangent, out float3 bitangent)
+{
+    float sign = (normal.z >= 0) ? 1 : -1;
+    float a = -1.0 / (sign + normal.z);
+    float b = normal.x * normal.y * a;
+    tangent = float3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
+    bitangent = float3(b, sign + normal.y * normal.y * a, -normal.y);
+}
+
+// Returns the sampled H vector in tangent space, assuming N = (0, 0, 1).
+float3 RTXDI_ImportanceSampleGGX(float2 random, float roughness)
+{
+    float alpha = square(roughness);
+
+    float phi = 2 * PI * random.x;
+    float cosTheta = sqrt((1 - random.y) / (1 + (square(alpha) - 1) * random.y));
+    float sinTheta = sqrt(1 - cosTheta * cosTheta);
+
+    float3 H;
+    H.x = sinTheta * cos(phi);
+    H.y = sinTheta * sin(phi);
+    H.z = cosTheta;
+
+    return H;
+}
+
 // A surface with enough information to evaluate BRDFs
 struct RAB_Surface
 {
@@ -83,6 +141,55 @@ struct RAB_Surface
 
 typedef RandomSamplerState RAB_RandomSamplerState;
 
+float2 RAB_GetEnvironmentMapRandXYFromDir(float3 worldDir)
+{
+    return 0;
+}
+
+float RAB_EvaluateEnvironmentMapSamplingPdf(float3 L)
+{
+    // No Environment sampling
+    return 0;
+}
+
+float RAB_EvaluateLocalLightSourcePdf(uint lightIndex)
+{
+    // Uniform pdf
+    return 1.0 / g_Const.lightBufferParams.localLightBufferRegion.numLights;
+}
+
+float getSurfaceDiffuseProbability(RAB_Surface surface)
+{
+    float diffuseWeight = calcLuminance(surface.diffuseAlbedo);
+    float specularWeight = calcLuminance(Schlick_Fresnel(surface.specularF0, dot(surface.viewDir, surface.normal)));
+    float sumWeights = diffuseWeight + specularWeight;
+    return sumWeights < 1e-7f ? 1.f : (diffuseWeight / sumWeights);
+}
+
+float3 worldToTangent(RAB_Surface surface, float3 w)
+{
+    // reconstruct tangent frame based off worldspace normal
+    // this is ok for isotropic BRDFs
+    // for anisotropic BRDFs, we need a user defined tangent
+    float3 tangent;
+    float3 bitangent;
+    ConstructONB(surface.normal, tangent, bitangent);
+
+    return float3(dot(bitangent, w), dot(tangent, w), dot(surface.normal, w));
+}
+
+float3 tangentToWorld(RAB_Surface surface, float3 h)
+{
+    // reconstruct tangent frame based off worldspace normal
+    // this is ok for isotropic BRDFs
+    // for anisotropic BRDFs, we need a user defined tangent
+    float3 tangent;
+    float3 bitangent;
+    ConstructONB(surface.normal, tangent, bitangent);
+
+    return bitangent * h.x + tangent * h.y + surface.normal * h.z;
+}
+
 RAB_RandomSamplerState RAB_InitRandomSampler(uint2 index, uint pass)
 {
     return initRandomSampler(index, g_Const.frameIndex + pass * 13);
@@ -91,6 +198,29 @@ RAB_RandomSamplerState RAB_InitRandomSampler(uint2 index, uint pass)
 float RAB_GetNextRandom(inout RAB_RandomSamplerState rng)
 {
     return sampleUniformRng(rng);
+}
+
+// Output an importanced sampled reflection direction from the BRDF given the view
+// Return true if the returned direction is above the surface
+bool RAB_GetSurfaceBrdfSample(RAB_Surface surface, inout RAB_RandomSamplerState rng, out float3 dir)
+{
+    float3 rand;
+    rand.x = RAB_GetNextRandom(rng);
+    rand.y = RAB_GetNextRandom(rng);
+    rand.z = RAB_GetNextRandom(rng);
+    if (rand.x < surface.diffuseProbability)
+    {
+        float pdf;
+        float3 h = SampleCosHemisphere(rand.yz, pdf);
+        dir = tangentToWorld(surface, h);
+    }
+    else
+    {
+        float3 h = RTXDI_ImportanceSampleGGX(rand.yz, max(surface.roughness, kMinRoughness));
+        dir = reflect(-surface.viewDir, tangentToWorld(surface, h));
+    }
+
+    return dot(surface.normal, dir) > 0.f;
 }
 
 RAB_LightInfo RAB_EmptyLightInfo()
@@ -176,6 +306,47 @@ float RAB_GetLightSampleTargetPdfForSurface(RAB_LightSample lightSample, RAB_Sur
 RAB_LightInfo RAB_LoadLightInfo(uint index, bool previousFrame)
 {
     return LightDataBuffer[index];
+}
+
+struct PolymorphicLightRayPayload
+{
+    bool    hitLight;
+    uint    lightIndex;
+    float2  hitUV;
+};
+
+// Return true if anything was hit. If false, RTXDI will do environment map sampling
+// o_lightIndex: If hit, must be a valid light index for RAB_LoadLightInfo, if no local light was hit, must be RTXDI_InvalidLightIndex
+// randXY: The randXY that corresponds to the hit location and is the same used for RAB_SamplePolymorphicLight
+bool RAB_TraceRayForLocalLight(float3 origin, float3 direction, float tMin, float tMax,
+    out uint o_lightIndex, out float2 o_randXY)
+{
+    o_lightIndex    = RTXDI_InvalidLightIndex;
+    o_randXY        = 0;
+
+    RayDesc rayDesc;
+    rayDesc.Origin      = origin;
+    rayDesc.Direction   = direction;
+    rayDesc.TMin        = tMin;
+    rayDesc.TMax        = tMax;
+
+    PolymorphicLightRayPayload payload;
+    payload.hitLight    = false;
+    payload.lightIndex  = RTXDI_InvalidLightIndex;
+
+    TraceRay(PolymorphicLightTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
+    
+    if (payload.hitLight)
+    {
+        o_lightIndex = payload.lightIndex;
+        if (o_lightIndex != RTXDI_InvalidLightIndex)
+        {
+            float2 hitUV = payload.hitUV;
+            o_randXY = randomFromBarycentric(hitUVToBarycentric(hitUV));
+        }
+    }
+
+    return payload.hitLight;
 }
 
 #endif

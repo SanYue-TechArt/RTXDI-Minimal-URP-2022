@@ -41,6 +41,8 @@
 
 #define RTXDI_INVALID_LIGHT_INDEX (0xffffffffu)
 
+static const uint RTXDI_InvalidLightIndex = RTXDI_INVALID_LIGHT_INDEX;
+
 // Minimal Sample中暂时不用这两个
 /*#include "ReGIRParameters.h"
 #include "RISBufferSegmentParameters.h"*/
