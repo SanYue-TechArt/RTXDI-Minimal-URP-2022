@@ -8,9 +8,6 @@ void RtxdiRayGen()
     const uint2 pixelPosition   = uint2(DispatchRaysIndex().x, DispatchRaysIndex().y);
     const float2 positionNDC    = float2(pixelPosition.x / DispatchRaysDimensions().x, pixelPosition.y / DispatchRaysDimensions().y);
     const float2 screen_uv      = positionNDC;
-    
-    ShadingOutput[pixelPosition] = float4(1,0,0,0);
-    return;
 
     float d         = SAMPLE_TEXTURE2D_X_LOD(_CameraDepthTexture, sampler_PointClamp, screen_uv, 0).x;
     float4 gbuffer0 = SAMPLE_TEXTURE2D_X_LOD(_GBuffer0, sampler_PointClamp, screen_uv, 0);
@@ -54,6 +51,9 @@ void RtxdiRayGen()
     {
         lightSample = brdfSample;
     }
+
+    ShadingOutput[pixelPosition] = float4(1,0,0,0);
+    return;
 }
 
 #endif
