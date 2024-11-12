@@ -326,25 +326,31 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                         }
              
                         // 将合并后的cpu灯光数据上载到gpu
+                        _merged_vertex_buffer_gpu?.Release();
                         _merged_vertex_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_vertex_count,
                             sizeof(PolymorphicLight.TriangleLightVertex));
                         _merged_vertex_buffer_gpu.SetData(merged_vertex_buffer_cpu);
                         
+                        _merged_index_buffer_gpu?.Release();
                         _merged_index_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count,
                             sizeof(int));
                         _merged_index_buffer_gpu.SetData(merged_index_buffer_cpu);
                         
+                        _light_task_buffer_gpu?.Release();
                         _light_task_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, tasks.Count,
                             sizeof(PrepareLightsTask));
                         _light_task_buffer_gpu.SetData(tasks);
                         
+                        _light_data_buffer_gpu?.Release();
                         _light_data_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3,
                             sizeof(RAB_LightInfo));
                         
+                        _geometry_instance_to_light_gpu?.Release();
                         _geometry_instance_to_light_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
                             geometry_instance_to_light.Count, sizeof(uint));
                         _geometry_instance_to_light_gpu.SetData(geometry_instance_to_light);
                         
+                        _triangle_light_debug_buffer_gpu?.Release();
                         _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
                             total_index_count / 3, sizeof(TriangleLightDebug));
 
@@ -398,16 +404,19 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         public override void FrameCleanup(CommandBuffer cmd)
         {
             if (DebugLightDataBuffer) OutputLightDataStr();
-            
-            SafeReleasePreFrameBuffers();
         }
 
         public void Setup(bool debugLightData) => DebugLightDataBuffer = debugLightData;
 
         public void Release()
         {
-            SafeReleasePreFrameBuffers();
-            SafeReleaseGraphicsBuffer(ref _resampling_constants_buffer);
+            _merged_vertex_buffer_gpu?.Release(); _merged_vertex_buffer_gpu = null;
+            _merged_index_buffer_gpu?.Release(); _merged_index_buffer_gpu = null;
+            _light_task_buffer_gpu?.Release(); _light_task_buffer_gpu = null;
+            _light_data_buffer_gpu?.Release(); _light_data_buffer_gpu = null;
+            _triangle_light_debug_buffer_gpu?.Release(); _triangle_light_debug_buffer_gpu = null;
+            _geometry_instance_to_light_gpu?.Release(); _geometry_instance_to_light_gpu = null;
+            _resampling_constants_buffer?.Release(); _resampling_constants_buffer = null;
         }
 
         private void FillResamplingConstants(RTXDISettings rtxdiSettings, int renderWidth, int renderHeight)
@@ -444,17 +453,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             _resampling_constants.inputBufferIndex = ~(_resampling_constants.frameIndex & 1u);
             _resampling_constants.outputBufferIndex = _resampling_constants.frameIndex & 1u;
         }
-        
-        private void SafeReleasePreFrameBuffers()
-        {
-            SafeReleaseGraphicsBuffer(ref _merged_vertex_buffer_gpu);
-            SafeReleaseGraphicsBuffer(ref _merged_index_buffer_gpu);
-            SafeReleaseGraphicsBuffer(ref _light_task_buffer_gpu);
-            SafeReleaseGraphicsBuffer(ref _light_data_buffer_gpu);
-            SafeReleaseGraphicsBuffer(ref _triangle_light_debug_buffer_gpu);
-            SafeReleaseGraphicsBuffer(ref _geometry_instance_to_light_gpu);
-        }
-        
+
         private void OutputLightDataStr()
         {
             if (_light_data_buffer_gpu == null)
