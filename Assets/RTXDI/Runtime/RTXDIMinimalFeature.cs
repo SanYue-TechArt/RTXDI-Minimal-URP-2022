@@ -189,6 +189,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         private GraphicsBuffer _resampling_constants_buffer = null;
 
+        private RayTracingAccelerationStructure _scene_tlas = null;
+
         private static class GpuParams
         {
             // Buffer & Textures & TLAS
@@ -197,7 +199,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             public static readonly int ShadingOutput = Shader.PropertyToID("ShadingOutput");
             public static readonly int ResampleConstants = Shader.PropertyToID("ResampleConstants");
             public static readonly int LightDataBuffer = Shader.PropertyToID("LightDataBuffer");
-            
+            public static readonly int SceneTLAS = Shader.PropertyToID("SceneTLAS");
+
             // Prepare Lights
             public static readonly int HAS_POLYMORPHIC_LIGHTS = Shader.PropertyToID("HAS_POLYMORPHIC_LIGHTS");
             public static readonly int numTasks = Shader.PropertyToID("numTasks");
@@ -215,6 +218,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
             _light_buffer_parameters = new RTXDI_LightBufferParameters();
             _polymorphic_light_tlas = new RayTracingAccelerationStructure();
+            
+            _scene_tlas = new RayTracingAccelerationStructure();
         }
 
         public override unsafe void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
@@ -271,7 +276,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                         
                         var vertex_buffer = polyLight.GetCpuVertexBuffer();
                         var index_buffer = polyLight.GetCpuIndexBuffer();
-                        var mesh_renderer = polyLight.GetMeshRenderer();
+                        var mesh_renderer = polyLight.GetMeshRenderer(); 
 
                         if (vertex_buffer != null && index_buffer != null && mesh_renderer != null)
                         {
@@ -345,10 +350,6 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
                         prepare_polymorphic_light = true; 
                     }
-                    else
-                    {
-                        prepare_polymorphic_light = false;
-                    }
                 }
                 
                 // Enable/Disable light prepare computation.
@@ -377,10 +378,12 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
             using (new ProfilingScope(cmd, new ProfilingSampler("RTXDI: ReSTIR Lighting")))
             {
+                cmd.BuildRayTracingAccelerationStructure(_scene_tlas);
+                
                 cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.PolymorphicLightTLAS, _polymorphic_light_tlas);
+                cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.SceneTLAS, _scene_tlas);
                 cmd.SetGlobalBuffer(GpuParams.GeometryInstanceToLight, _geometry_instance_to_light_gpu);
                 cmd.SetGlobalBuffer(GpuParams.ResampleConstants, _resampling_constants_buffer);
-                // TODO: 排查input buffer为Null的问题
                 cmd.SetGlobalBuffer(GpuParams.LightDataBuffer, _light_data_buffer_gpu);
                 cmd.SetRayTracingTextureParam(_rtxdi_raytracing_shader, GpuParams.ShadingOutput, _shading_output);
 
@@ -398,6 +401,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             
             SafeReleasePreFrameBuffers();
         }
+
+        public void Setup(bool debugLightData) => DebugLightDataBuffer = debugLightData;
 
         public void Release()
         {
@@ -459,6 +464,20 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             }
 
             {
+                var light_data_buffer_cpu = new RAB_LightInfo[_light_data_buffer_gpu.count];
+                _light_data_buffer_gpu.GetData(light_data_buffer_cpu);
+                
+                var msg = "";
+                var idx = 1;
+                foreach (var triangle in light_data_buffer_cpu)
+                {
+                    msg += $"triangle{idx}: base={triangle.center} radiance={Unpack_R16G16B16A16_FLOAT(triangle.radiance)}\n\n";
+                    idx += 1;
+                }
+                Debug.Log(msg);
+            }
+
+            /*{
                 var triangle_light_debug_cpu = new TriangleLightDebug[_triangle_light_debug_buffer_gpu.count];
                 _triangle_light_debug_buffer_gpu.GetData(triangle_light_debug_cpu);
 
@@ -472,11 +491,11 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                 }
                 Debug.Log(msg);
 
-                // TODO: unity console不支持输出小数点后第三位数，以下变量将输出为 (0.01, 0.01, 0.01)
+                /#1#/ TODO: unity console不支持输出小数点后第三位数，以下变量将输出为 (0.01, 0.01, 0.01)
                 // 本例中使用的边长为1cm（0.01m in unity）的正方体的vertex position实际上是(0.005,0.005,0.005)，但输出只会变成(0.01, 0.01, 0.01)
                 var point = new Vector3(0.005f, 0.005f, 0.005f);
-                Debug.Log(point);
-            }
+                Debug.Log(point);#1#
+            }*/
         }
     }
 
@@ -554,6 +573,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         _rtxdi_pass.renderPassEvent = RenderPassEvent.AfterRenderingGbuffer + 1;
+        _rtxdi_pass.Setup(DebugLightData);
         renderer.EnqueuePass(_rtxdi_pass);
 
         /*_history_gbuffer_pass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;

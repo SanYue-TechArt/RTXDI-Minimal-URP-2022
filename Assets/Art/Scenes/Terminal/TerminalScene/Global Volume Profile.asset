@@ -18,7 +18,7 @@ MonoBehaviour:
     m_Value: 1
   enableResampling:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
   unbiasedMode:
     m_OverrideState: 1
     m_Value: 0
@@ -27,13 +27,13 @@ MonoBehaviour:
     m_Value: 8
   numInitialBrdfSamples:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
   brdfCutoff:
     m_OverrideState: 1
     m_Value: 0
   numSpatialSamples:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

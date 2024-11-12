@@ -170,6 +170,39 @@ Shader "Universal Render Pipeline/Lit"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
             ENDHLSL
         }
+        
+        // Used by RTXDI Visibility Trace
+        Pass
+        {
+            Name "RTXDIVisibilityTracing"
+            Tags { "LightMode" = "RTXDIVisibilityTracing" }
+            
+            HLSLPROGRAM
+
+            #pragma raytracing test // test和任何内容无关，加此行只是为了通过编译
+
+            #include "UnityRaytracingMeshUtils.cginc"
+
+            // 重心坐标插值
+            struct AttributeData
+            {
+                float2 barycentrics;
+            };
+
+            struct VisibilityRayPayload
+            {
+                bool isHit;
+            };
+
+            [shader("closesthit")]
+            void ClosestHitShader(inout VisibilityRayPayload payload : SV_RayPayload,
+                AttributeData attributeData : SV_IntersectionAttributes)
+            {
+                payload.isHit = true;
+            }
+            
+            ENDHLSL
+        }
 
         Pass
         {

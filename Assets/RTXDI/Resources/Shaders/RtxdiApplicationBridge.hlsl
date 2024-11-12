@@ -5,20 +5,20 @@
 #include "Packages/com.unity.render-pipelines.universal/Shaders/Utils/Deferred.hlsl"
 #include "ShaderParameters.hlsl"
 
-RWStructuredBuffer<RTXDI_PackedDIReservoir> LightReservoirBuffer;
-#define RTXDI_LIGHT_RESERVOIR_BUFFER LightReservoirBuffer
-
 // 作为ConstantBuffer使用，只有1个element
 RWStructuredBuffer<ResamplingConstants> ResampleConstants;
 #define g_Const ResampleConstants[0]
 
 // 光照结果
 RWTexture2D<float4> ShadingOutput;
+
 RWStructuredBuffer<RTXDI_PackedDIReservoir> LightReservoirs;
+#define RTXDI_LIGHT_RESERVOIR_BUFFER LightReservoirs
 
 StructuredBuffer<RAB_LightInfo> LightDataBuffer;
 
 RaytracingAccelerationStructure PolymorphicLightTLAS;
+RaytracingAccelerationStructure SceneTLAS;
 
 StructuredBuffer<uint> GeometryInstanceToLight;
 
@@ -30,6 +30,8 @@ TEXTURE2D_X(_GBuffer2);
 #include "TriangleLight.hlsl"
 
 static const float kMinRoughness = 0.05f;
+
+#define BACKGROUND_DEPTH 65504.f
 
 // -------------------------------------
 //               BSDF
@@ -248,6 +250,11 @@ bool RAB_IsAnalyticLightSample(RAB_LightSample lightSample)
     return false;
 }
 
+bool RAB_IsSurfaceValid(RAB_Surface surface)
+{
+    return surface.viewDepth != BACKGROUND_DEPTH;
+}
+
 void RAB_GetLightDirDistance(RAB_Surface surface, RAB_LightSample lightSample,
     out float3 o_lightDir,
     out float o_lightDistance)
@@ -347,6 +354,38 @@ bool RAB_TraceRayForLocalLight(float3 origin, float3 direction, float tMin, floa
     }
 
     return payload.hitLight;
+}
+
+struct VisibilityRayPayload
+{
+    bool isHit;
+};
+
+RayDesc setupVisibilityRay(RAB_Surface surface, RAB_LightSample lightSample, float offset = 0.001)
+{
+    float3 L = lightSample.position - surface.worldPos;
+
+    RayDesc ray;
+    ray.TMin        = offset;
+    ray.TMax        = length(L) - offset;
+    ray.Direction   = normalize(L);
+    ray.Origin      = surface.worldPos;
+
+    return ray;
+}
+
+// Tests the visibility between a surface and a light sample.
+// Returns true if there is nothing between them.
+bool RAB_GetConservativeVisibility(RAB_Surface surface, RAB_LightSample lightSample)
+{
+    RayDesc rayDesc = setupVisibilityRay(surface, lightSample);
+
+    VisibilityRayPayload payload;
+    payload.isHit = false;
+
+    TraceRay(SceneTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
+    
+    return !payload.isHit;
 }
 
 #endif

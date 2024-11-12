@@ -8,6 +8,12 @@
 #error "RTXDI_LIGHT_RESERVOIR_BUFFER must be defined to point to a RWStructuredBuffer<RTXDI_PackedDIReservoir> type resource"
 #endif
 
+// Define this macro to 0 if your shader needs read-only access to the reservoirs, 
+// to avoid compile errors in the RTXDI_StoreDIReservoir function
+#ifndef RTXDI_ENABLE_STORE_RESERVOIR
+#define RTXDI_ENABLE_STORE_RESERVOIR 1
+#endif
+
 // This structure represents a single light reservoir that stores the weights, the sample ref,
 // sample count (M), and visibility for reuse. It can be serialized into RTXDI_PackedDIReservoir for storage.
 struct RTXDI_DIReservoir
