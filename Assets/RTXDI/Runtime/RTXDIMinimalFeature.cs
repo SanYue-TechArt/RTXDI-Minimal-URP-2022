@@ -135,13 +135,13 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         private ComputeShader _prepare_light_cs = null;
         private readonly int _prepare_light_kernel;
         
-        private ComputeBuffer _merged_vertex_buffer_gpu = null;
-        private ComputeBuffer _merged_index_buffer_gpu = null;
-        private ComputeBuffer _light_task_buffer_gpu = null;
-        private ComputeBuffer _light_data_buffer_gpu = null;
-        private ComputeBuffer _geometry_instance_to_light_gpu = null;
+        private GraphicsBuffer _merged_vertex_buffer_gpu = null;
+        private GraphicsBuffer _merged_index_buffer_gpu = null;
+        private GraphicsBuffer _light_task_buffer_gpu = null;
+        private GraphicsBuffer _light_data_buffer_gpu = null;
+        private GraphicsBuffer _geometry_instance_to_light_gpu = null;
 
-        private ComputeBuffer _triangle_light_debug_buffer_gpu = null;
+        private GraphicsBuffer _triangle_light_debug_buffer_gpu = null;
         private RTXDI_LightBufferParameters _light_buffer_parameters;
         private RayTracingAccelerationStructure _polymorphic_light_tlas = null;
 
@@ -334,45 +334,26 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
          
                     // 将合并后的cpu灯光数据上载到gpu
                     _merged_vertex_buffer_gpu?.Release();
-                    _merged_vertex_buffer_gpu = new ComputeBuffer(total_vertex_count,
-                        sizeof(PolymorphicLight.TriangleLightVertex), ComputeBufferType.Default);
+                    _merged_vertex_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_vertex_count, sizeof(PolymorphicLight.TriangleLightVertex));
                     _merged_vertex_buffer_gpu.SetData(merged_vertex_buffer_cpu);
 
                     _merged_index_buffer_gpu?.Release();
-                    _merged_index_buffer_gpu = new ComputeBuffer(total_index_count,
-                        sizeof(int), ComputeBufferType.Default);
+                    _merged_index_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count, sizeof(int));
                     _merged_index_buffer_gpu.SetData(merged_index_buffer_cpu);
                     
                     _light_task_buffer_gpu?.Release();
-                    _light_task_buffer_gpu = new ComputeBuffer(tasks.Count,
-                        sizeof(PrepareLightsTask), ComputeBufferType.Default);
+                    _light_task_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, tasks.Count, sizeof(PrepareLightsTask));
                     _light_task_buffer_gpu.SetData(tasks);
-
-                    var empty_light_data = new List<RAB_LightInfo>();
-                    for(int i = 0; i < total_index_count / 3; ++i)
-                    {
-                        var info = new RAB_LightInfo();
-                        info.center = Vector3.zero;
-                        info.radiance = new uint2(0u, 0u);
-                        info.debug = Vector4.zero;
-                        info.scalars = 0u;
-                        info.direction1 = 0u;
-                        info.direction2 = 0u;
-                        empty_light_data.Add(info);
-                    }
-                    _light_data_buffer_gpu?.Release();
-                    _light_data_buffer_gpu = new ComputeBuffer(total_index_count / 3,
-                        sizeof(RAB_LightInfo), ComputeBufferType.Default);
-                    _light_data_buffer_gpu.SetData(empty_light_data);
                     
+                    _light_data_buffer_gpu?.Release();
+                    _light_data_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3, sizeof(RAB_LightInfo));
+
                     _geometry_instance_to_light_gpu?.Release();
-                    _geometry_instance_to_light_gpu = new ComputeBuffer(
-                        geometry_instance_to_light.Count, sizeof(uint), ComputeBufferType.Default);
+                    _geometry_instance_to_light_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, geometry_instance_to_light.Count, sizeof(uint));
                     _geometry_instance_to_light_gpu.SetData(geometry_instance_to_light);
                     
                     _triangle_light_debug_buffer_gpu?.Release();
-                    _triangle_light_debug_buffer_gpu = new ComputeBuffer(
-                        total_index_count / 3, sizeof(TriangleLightDebug), ComputeBufferType.Default);
+                    _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3, sizeof(TriangleLightDebug));
 
                     prepare_polymorphic_light = true; 
                 }
