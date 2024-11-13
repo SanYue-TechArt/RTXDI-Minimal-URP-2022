@@ -13,7 +13,8 @@ void RtxdiRayGen()
     float4 gbuffer0 = SAMPLE_TEXTURE2D_X_LOD(_GBuffer0, sampler_PointClamp, screen_uv, 0);
     float4 gbuffer1 = SAMPLE_TEXTURE2D_X_LOD(_GBuffer1, sampler_PointClamp, screen_uv, 0);
     float4 gbuffer2 = SAMPLE_TEXTURE2D_X_LOD(_GBuffer2, sampler_PointClamp, screen_uv, 0);
-    
+
+    // TODO: 区分GeoNormal和PixelNormal？
     RAB_Surface primarySurface          = (RAB_Surface)0;
     primarySurface.worldPos             = ComputeWorldSpacePosition(positionNDC, d, UNITY_MATRIX_I_VP);
     primarySurface.viewDir              = GetWorldSpaceNormalizeViewDir(primarySurface.worldPos);
@@ -71,6 +72,36 @@ void RtxdiRayGen()
             // If not visible, discard the sample (but keep the M)
             RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
         }
+    }
+
+    if(g_Const.enableResampling)
+    {
+        /*
+        // Fill out the parameter structure.
+        // Mostly use literal constants for simplicity.
+        // TODO: 填充参数
+        RTXDI_DISpatioTemporalResamplingParameters stparams;
+        stparams.screenSpaceMotion              = motionVector;
+        stparams.sourceBufferIndex              = g_Const.inputBufferIndex;
+        stparams.maxHistoryLength               = 20;
+        stparams.biasCorrectionMode             = g_Const.unbiasedMode ? RTXDI_BIAS_CORRECTION_RAY_TRACED : RTXDI_BIAS_CORRECTION_BASIC;
+        stparams.depthThreshold                 = 0.1;
+        stparams.normalThreshold                = 0.5;
+        stparams.numSamples                     = g_Const.numSpatialSamples + 1;
+        stparams.numDisocclusionBoostSamples    = 0;
+        stparams.samplingRadius                 = 32;
+        stparams.enableVisibilityShortcut       = true;
+        stparams.enablePermutationSampling      = true;
+        stparams.discountNaiveSamples           = false;
+
+        // This variable will receive the position of the sample reused from the previous frame.
+        // It's only needed for gradient evaluation, ignore it here.
+        int2 temporalSamplePixelPos = -1;
+
+        // Call the resampling function, update the reservoir and lightSample variables
+        reservoir = RTXDI_DISpatioTemporalResampling(pixelPosition, primarySurface, reservoir,
+                rng, g_Const.runtimeParams, g_Const.restirDIReservoirBufferParams, stparams, temporalSamplePixelPos, lightSample);
+    */
     }
 
     float3 shadingOutput = 0;

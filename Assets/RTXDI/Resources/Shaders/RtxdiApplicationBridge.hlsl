@@ -22,10 +22,20 @@ RaytracingAccelerationStructure SceneTLAS;
 
 StructuredBuffer<uint> GeometryInstanceToLight;
 
+// TODO:填充Buffer
+Buffer<float2> NeighborOffsets;
+#define RTXDI_NEIGHBOR_OFFSETS_BUFFER NeighborOffsets
+
 TEXTURE2D_X(_CameraDepthTexture);
 TEXTURE2D_X(_GBuffer0);
 TEXTURE2D_X(_GBuffer1);
 TEXTURE2D_X(_GBuffer2);
+
+// TODO:填充Prev Info
+TEXTURE2D_X(_PreviousCameraDepthTexture);
+TEXTURE2D_X(_PreviousGBuffer0);
+TEXTURE2D_X(_PreviousGBuffer1);
+TEXTURE2D_X(_PreviousGBuffer2);
 
 #include "TriangleLight.hlsl"
 
@@ -225,6 +235,45 @@ bool RAB_GetSurfaceBrdfSample(RAB_Surface surface, inout RAB_RandomSamplerState 
     return dot(surface.normal, dir) > 0.f;
 }
 
+// Load a sample from the previous G-buffer.
+RAB_Surface RAB_GetGBufferSurface(int2 pixelPosition, bool previousFrame)
+{
+    RAB_Surface surface = (RAB_Surface)0;
+
+    // We do not have access to the current G-buffer in this sample because it's using
+    // a single render pass with a fused resampling kernel, so just return an invalid surface.
+    // This should never happen though, as the fused kernel doesn't call RAB_GetGBufferSurface(..., false)
+    if (!previousFrame)
+        return surface;
+
+    if (any(pixelPosition >= _ScreenParams.xy))
+        return surface;
+
+    float d             = LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).x;
+    surface.viewDepth   = LinearEyeDepth(d, _ZBufferParams);
+
+    if(surface.viewDepth == BACKGROUND_DEPTH)
+        return surface;
+
+    float4 gbuffer0 = LOAD_TEXTURE2D_X_LOD(_PreviousGBuffer0, pixelPosition, 0);
+    float4 gbuffer1 = LOAD_TEXTURE2D_X_LOD(_PreviousGBuffer1, pixelPosition, 0);
+    float4 gbuffer2 = LOAD_TEXTURE2D_X_LOD(_PreviousGBuffer2, pixelPosition, 0);
+
+    float2 positionNDC = float2((float)pixelPosition.x / _ScreenParams.x, (float)pixelPosition.y / _ScreenParams.y); 
+
+    // TODO: 区分GeoNormal和PixelNormal？
+    surface.normal              = normalize(UnpackNormal(gbuffer2.xyz));
+    surface.geoNormal           = surface.normal;
+    surface.diffuseAlbedo       = gbuffer0.rgb;
+    surface.specularF0          = gbuffer1.rgb;
+    surface.roughness           = 1.0f - gbuffer2.a;
+    surface.worldPos            = ComputeWorldSpacePosition(positionNDC, d, UNITY_MATRIX_I_VP);
+    surface.viewDir             = GetWorldSpaceNormalizeViewDir(surface.worldPos);
+    surface.diffuseProbability  = getSurfaceDiffuseProbability(surface);
+
+    return surface;
+}
+
 RAB_LightInfo RAB_EmptyLightInfo()
 {
     return (RAB_LightInfo)0;
@@ -238,6 +287,13 @@ RAB_LightSample RAB_EmptyLightSample()
 RAB_LightSample RAB_SamplePolymorphicLight(RAB_LightInfo lightInfo, RAB_Surface surface, float2 uv)
 {
     return TriangleLight::Create(lightInfo).calcSample(uv, surface.worldPos);
+}
+
+// Translate the light index between the current and previous frame.
+// Do nothing as our lights are static in this sample.
+int RAB_TranslateLightIndex(uint lightIndex, bool currentToPrevious)
+{
+    return int(lightIndex);
 }
 
 float RAB_LightSampleSolidAnglePdf(RAB_LightSample lightSample)
@@ -386,6 +442,14 @@ bool RAB_GetConservativeVisibility(RAB_Surface surface, RAB_LightSample lightSam
     TraceRay(SceneTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
     
     return !payload.isHit;
+}
+
+// Tests the visibility between a surface and a light sample on the previous frame.
+// Since the scene is static in this sample app, it's equivalent to RAB_GetConservativeVisibility.
+bool RAB_GetTemporalConservativeVisibility(RAB_Surface currentSurface, RAB_Surface previousSurface,
+    RAB_LightSample lightSample)
+{
+    return RAB_GetConservativeVisibility(currentSurface, lightSample);
 }
 
 #endif

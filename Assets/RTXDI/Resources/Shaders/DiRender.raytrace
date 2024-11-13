@@ -4,5 +4,6 @@
 
 #include "RtxdiApplicationBridge.hlsl"
 #include "InitialSamplingFunctions.hlsl"
+#include "DIResamplingFunctions.hlsl"
 
 #include "DiRenderRayGen.hlsl"

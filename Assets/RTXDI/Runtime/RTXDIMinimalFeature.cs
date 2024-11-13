@@ -179,19 +179,29 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         #endregion
 
-        private bool _is_pass_executable = true;
+        #region [ReSTIR Lighting]
 
         private ResamplingConstants _resampling_constants;
-
-        private const int RTXDI_RESERVOIR_BLOCK_SIZE = 16;
-
-        private RTHandle _shading_output;
-
-        private RayTracingShader _rtxdi_raytracing_shader = null;
-
         private ComputeBuffer _resampling_constants_buffer = null;
-
+        private const int RTXDI_RESERVOIR_BLOCK_SIZE = 16;
+        private RTHandle _shading_output;
+        private RayTracingShader _rtxdi_raytracing_shader = null;
         private RayTracingAccelerationStructure _scene_tlas = null;
+
+        #endregion
+        
+        #region [Previous GBuffer]
+
+        private RTHandle _prev_gBuffer0; // Albedo
+        private RTHandle _prev_gBuffer1; // Specular and Metallic
+        private RTHandle _prev_gBuffer2; // Normal and Smoothness
+        private RTHandle _prev_depth;
+
+        private Shader _copy_gbuffer_ps;
+
+        #endregion
+        
+        private bool _is_pass_executable = true;
 
         private static class GpuParams
         {
@@ -209,6 +219,12 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             public static readonly int TaskBuffer = Shader.PropertyToID("TaskBuffer");
             public static readonly int LightVertexBuffer = Shader.PropertyToID("LightVertexBuffer");
             public static readonly int LightIndexBuffer = Shader.PropertyToID("LightIndexBuffer");
+            
+            // Previous GBuffer
+            public static readonly int _PreviousCameraDepthTexture = Shader.PropertyToID("_PreviousCameraDepthTexture");
+            public static readonly int _PreviousGBuffer0 = Shader.PropertyToID("_PreviousGBuffer0");
+            public static readonly int _PreviousGBuffer1 = Shader.PropertyToID("_PreviousGBuffer1");
+            public static readonly int _PreviousGBuffer2 = Shader.PropertyToID("_PreviousGBuffer2");
         }
 
         public RTXDIPass()
@@ -220,8 +236,9 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
             _light_buffer_parameters = new RTXDI_LightBufferParameters();
             _polymorphic_light_tlas = new RayTracingAccelerationStructure();
-            
             _scene_tlas = new RayTracingAccelerationStructure();
+
+            _copy_gbuffer_ps = Resources.Load<Shader>("Shaders/CopyGBuffer");
         }
 
         public override unsafe void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
@@ -235,6 +252,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             _is_pass_executable = rtxdiSettings != null && rtxdiSettings.IsActive();
             _is_pass_executable &= _rtxdi_raytracing_shader != null;
             _is_pass_executable &= _prepare_light_cs != null;
+            _is_pass_executable &= _copy_gbuffer_ps != null;
             FillResamplingConstants(rtxdiSettings, cameraTextureDescriptor.width, cameraTextureDescriptor.height);
 
             _resampling_constants_buffer ??=
@@ -248,6 +266,31 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             shadingOutputDesc.useMipMap = false;
             shadingOutputDesc.enableRandomWrite = true;
             RenderingUtils.ReAllocateIfNeeded(ref _shading_output, shadingOutputDesc);
+            
+            // --------------------------------------
+            // Previous GBuffers.
+            var diffuse_descriptor = cameraTextureDescriptor;
+            diffuse_descriptor.graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
+            RenderingUtils.ReAllocateIfNeeded(ref _prev_gBuffer0, diffuse_descriptor);
+
+            var specular_descriptor = cameraTextureDescriptor;
+            specular_descriptor.graphicsFormat = GraphicsFormat.R8G8B8A8_UNorm;
+            RenderingUtils.ReAllocateIfNeeded(ref _prev_gBuffer1, specular_descriptor);
+            
+            var renderer_data = GetRendererDataWithinFeature();
+            var accurate_normal = false;
+            if (renderer_data == null) Debug.LogWarning($"{nameof(HistoryGBufferPass)}: 获取Universal Renderer Data失败，法线回退到一般精度");
+            else accurate_normal = renderer_data.accurateGbufferNormals;
+            
+            var normal_descriptor = cameraTextureDescriptor;
+            // Reference: DeferredLights.cs - GetGBufferFormat
+            normal_descriptor.graphicsFormat = accurate_normal ? GraphicsFormat.R8G8B8A8_UNorm : DepthNormalOnlyPass.GetGraphicsFormat();
+            RenderingUtils.ReAllocateIfNeeded(ref _prev_gBuffer2, normal_descriptor);
+
+            var depth_descriptor = cameraTextureDescriptor;
+            depth_descriptor.depthBufferBits = 32;
+            depth_descriptor.graphicsFormat = GraphicsFormat.R32_SFloat;
+            RenderingUtils.ReAllocateIfNeeded(ref _prev_depth, depth_descriptor);
         }
 
         public override unsafe void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
@@ -403,6 +446,12 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
                 var cameraDescriptor = renderingData.cameraData.cameraTargetDescriptor;
                 cmd.DispatchRays(_rtxdi_raytracing_shader, "RtxdiRayGen", (uint)cameraDescriptor.width, (uint)cameraDescriptor.height, 1);
+            }
+
+            using (new ProfilingScope(cmd, new ProfilingSampler("RTXDI: Previous GBuffer Copy")))
+            {
+                ConfigureTarget(new[] { _prev_gBuffer0, _prev_gBuffer1, _prev_gBuffer2 },
+                    renderingData.cameraData.renderer.cameraDepthTargetHandle);
             }
 
             context.ExecuteCommandBuffer(cmd);
