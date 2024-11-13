@@ -13,9 +13,11 @@ struct TriangleLightVertex
 
 struct PrepareLightsTask
 {
-    float3  emissiveColor;
-    uint    triangleCount;
-    uint    lightBufferOffset;
+    float3      emissiveColor;
+    uint        triangleCount;
+    uint        lightBufferOffset;
+    uint3       padding;
+    float4x4    localToWorld;
 };
 
 struct ResamplingConstants

@@ -86,20 +86,24 @@ void PrepareLights (uint dispatchThreadId : SV_DispatchThreadID, uint groupThrea
         vertices[1] = LightVertexBuffer[task.lightBufferOffset + indices[1]];
         vertices[2] = LightVertexBuffer[task.lightBufferOffset + indices[2]];
 
+        float3 worldPos0 = mul(task.localToWorld, float4(vertices[0].position, 1.0)).xyz;
+        float3 worldPos1 = mul(task.localToWorld, float4(vertices[1].position, 1.0)).xyz;
+        float3 worldPos2 = mul(task.localToWorld, float4(vertices[2].position, 1.0)).xyz;
+
         float3 radiance = max(task.emissiveColor, 0.0f);
 
         TriangleLight triLight;
-        triLight.base       = vertices[0].position;
-        triLight.edge1      = vertices[1].position - vertices[0].position;
-        triLight.edge2      = vertices[2].position - vertices[0].position;
+        triLight.base       = worldPos0;
+        triLight.edge1      = worldPos1 - worldPos0;
+        triLight.edge2      = worldPos2 - worldPos0;
         triLight.radiance   = radiance;
 
-        triangle_light_debug.base = vertices[0].position;
-        triangle_light_debug.v1 = vertices[1].position;
-        triangle_light_debug.v2 = vertices[2].position;
-        triangle_light_debug.edge1 = triangle_light_debug.v1 - triangle_light_debug.base;
-        triangle_light_debug.edge2 = vertices[2].position - vertices[0].position;
-        triangle_light_debug.radiance = triLight.radiance;
+        triangle_light_debug.base       = worldPos0;
+        triangle_light_debug.v1         = worldPos1;
+        triangle_light_debug.v2         = worldPos2;
+        triangle_light_debug.edge1      = triangle_light_debug.v1 - triangle_light_debug.base;
+        triangle_light_debug.edge2      = worldPos2 - worldPos0;
+        triangle_light_debug.radiance   = triLight.radiance;
 
         lightInfo = triLight.Store();
     }

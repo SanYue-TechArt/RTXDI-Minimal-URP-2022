@@ -22,6 +22,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             public Vector3 emissiveColor;
             public uint triangleCount;
             public uint lightBufferOffset;
+            public uint3 padding;
+            public float4x4 localToWorld;
         }
         
         [StructLayout(LayoutKind.Sequential)]
@@ -133,13 +135,13 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         private ComputeShader _prepare_light_cs = null;
         private readonly int _prepare_light_kernel;
         
-        private GraphicsBuffer _merged_vertex_buffer_gpu = null;
-        private GraphicsBuffer _merged_index_buffer_gpu = null;
-        private GraphicsBuffer _light_task_buffer_gpu = null;
-        private GraphicsBuffer _light_data_buffer_gpu = null;
-        private GraphicsBuffer _geometry_instance_to_light_gpu = null;
+        private ComputeBuffer _merged_vertex_buffer_gpu = null;
+        private ComputeBuffer _merged_index_buffer_gpu = null;
+        private ComputeBuffer _light_task_buffer_gpu = null;
+        private ComputeBuffer _light_data_buffer_gpu = null;
+        private ComputeBuffer _geometry_instance_to_light_gpu = null;
 
-        private GraphicsBuffer _triangle_light_debug_buffer_gpu = null;
+        private ComputeBuffer _triangle_light_debug_buffer_gpu = null;
         private RTXDI_LightBufferParameters _light_buffer_parameters;
         private RayTracingAccelerationStructure _polymorphic_light_tlas = null;
 
@@ -187,7 +189,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         private RayTracingShader _rtxdi_raytracing_shader = null;
 
-        private GraphicsBuffer _resampling_constants_buffer = null;
+        private ComputeBuffer _resampling_constants_buffer = null;
 
         private RayTracingAccelerationStructure _scene_tlas = null;
 
@@ -226,6 +228,9 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         {
             base.Configure(cmd, cameraTextureDescriptor);
 
+            // -----------------------------------------------------------
+            //         填充全局常量，申请RT (Shading RT, Reservoir RT)
+            // -----------------------------------------------------------
             var rtxdiSettings = VolumeManager.instance.stack.GetComponent<RTXDISettings>();
             _is_pass_executable = rtxdiSettings != null && rtxdiSettings.IsActive();
             _is_pass_executable &= _rtxdi_raytracing_shader != null;
@@ -233,7 +238,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             FillResamplingConstants(rtxdiSettings, cameraTextureDescriptor.width, cameraTextureDescriptor.height);
 
             _resampling_constants_buffer ??=
-                new GraphicsBuffer(GraphicsBuffer.Target.Structured, 1, sizeof(ResamplingConstants));
+                new ComputeBuffer( 1, sizeof(ResamplingConstants), ComputeBufferType.Default);
             _resampling_constants_buffer.SetData(new[] { _resampling_constants });
 
             var shadingOutputDesc = cameraTextureDescriptor;
@@ -249,115 +254,137 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         {
             if (!_is_pass_executable) return;
             
-            var cmd = CommandBufferPool.Get("RTXDI Pass");
+            // -----------------------------------------------------------
+            //              准备灯光Task，准备所需的cpu/gpu buffer
+            // -----------------------------------------------------------
+            var tasks = new List<PrepareLightsTask>();
+                
+            bool prepare_polymorphic_light = false;
+            uint light_buffer_offset = 0;
             
-            using (new ProfilingScope(cmd, new ProfilingSampler("RTXDI: Prepare Polymorphic Lights")))
+            if (DebugLightDataBuffer) OutputLightDataStr();
+            
             {
-                var tasks = new List<PrepareLightsTask>();
+                _polymorphic_light_tlas.ClearInstances();
                 
-                bool prepare_polymorphic_light = false;
-                uint light_buffer_offset = 0;
-                
-                // Generate cpu-gpu side vertex buffer.
+                var polyLights = FindObjectsByType<PolymorphicLight>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+
+                // 收集每一盏灯光的cpu端顶点数据
+                var local_vertex_buffers_cpu = new List<PolymorphicLight.TriangleLightVertex[]>(polyLights.Length);
+                var local_index_buffers_cpu = new List<int[]>(polyLights.Length);
+                var geometry_instance_to_light = new List<uint>(polyLights.Length); // 记录每一个polymorphic light相对前一个polymorphic light的三角形偏移量
+                var total_vertex_count = 0;
+                var total_index_count = 0;
+                foreach (var polyLight in polyLights)
                 {
-                    _polymorphic_light_tlas.ClearInstances();
+                    if (!polyLight.IsValid()) continue;
                     
-                    var polyLights = FindObjectsByType<PolymorphicLight>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                    var vertex_buffer = polyLight.GetCpuVertexBuffer();
+                    var index_buffer = polyLight.GetCpuIndexBuffer();
+                    var mesh_renderer = polyLight.GetMeshRenderer(); 
 
-                    // 收集每一盏灯光的cpu端顶点数据
-                    var local_vertex_buffers_cpu = new List<PolymorphicLight.TriangleLightVertex[]>(polyLights.Length);
-                    var local_index_buffers_cpu = new List<int[]>(polyLights.Length);
-                    var geometry_instance_to_light = new List<uint>(polyLights.Length); // 记录每一个polymorphic light相对前一个polymorphic light的三角形偏移量
-                    var total_vertex_count = 0;
-                    var total_index_count = 0;
-                    foreach (var polyLight in polyLights)
+                    if (vertex_buffer != null && index_buffer != null && mesh_renderer != null)
                     {
-                        if (!polyLight.IsValid()) continue;
-                        
-                        var vertex_buffer = polyLight.GetCpuVertexBuffer();
-                        var index_buffer = polyLight.GetCpuIndexBuffer();
-                        var mesh_renderer = polyLight.GetMeshRenderer(); 
+                        local_vertex_buffers_cpu.Add(vertex_buffer);
+                        local_index_buffers_cpu.Add(index_buffer);
+                        total_vertex_count += vertex_buffer.Length;
+                        total_index_count += index_buffer.Length;
 
-                        if (vertex_buffer != null && index_buffer != null && mesh_renderer != null)
+                        PrepareLightsTask task;
+                        task.emissiveColor = polyLight.GetLightColor();
+                        task.lightBufferOffset = light_buffer_offset;
+                        task.triangleCount = (uint)(index_buffer.Length / 3);
+                        task.padding = uint3.zero;
+                        task.localToWorld = polyLight.transform.localToWorldMatrix;
+
+                        _polymorphic_light_tlas.AddInstance(mesh_renderer, new []
                         {
-                            local_vertex_buffers_cpu.Add(vertex_buffer);
-                            local_index_buffers_cpu.Add(index_buffer);
-                            total_vertex_count += vertex_buffer.Length;
-                            total_index_count += index_buffer.Length;
+                            RayTracingSubMeshFlags.ClosestHitOnly
+                        });
+                        geometry_instance_to_light.Add(light_buffer_offset);
 
-                            PrepareLightsTask task;
-                            task.emissiveColor = polyLight.GetLightColor();
-                            task.lightBufferOffset = light_buffer_offset;
-                            task.triangleCount = (uint)(index_buffer.Length / 3);
-                            
-                            _polymorphic_light_tlas.AddInstance(mesh_renderer, new []
-                            {
-                                RayTracingSubMeshFlags.ClosestHitOnly
-                            });
-                            geometry_instance_to_light.Add(light_buffer_offset);
-
-                            light_buffer_offset += task.triangleCount;
-                            
-                            tasks.Add(task);
-                        }
-                    }
-
-                    if (total_vertex_count > 0 && total_index_count > 0)
-                    {
-                        _polymorphic_light_tlas.Build();
+                        light_buffer_offset += task.triangleCount;
                         
-                        // 将所有灯光的cpu顶点数据合并到一起
-                        var merged_vertex_buffer_cpu = new PolymorphicLight.TriangleLightVertex[total_vertex_count];
-                        var merged_index_buffer_cpu = new int[total_index_count];
-                        var destination_index = 0;
-                        foreach (var local_vertex_buffer in local_vertex_buffers_cpu)
-                        {
-                            Array.Copy(local_vertex_buffer, 0, merged_vertex_buffer_cpu, destination_index,
-                                local_vertex_buffer.Length);
-                            destination_index += local_vertex_buffer.Length;
-                        }
-
-                        destination_index = 0;
-                        foreach (var local_index_buffer in local_index_buffers_cpu)
-                        {
-                            Array.Copy(local_index_buffer, 0, merged_index_buffer_cpu, destination_index,
-                                local_index_buffer.Length);
-                            destination_index += local_index_buffer.Length;
-                        }
-             
-                        // 将合并后的cpu灯光数据上载到gpu
-                        _merged_vertex_buffer_gpu?.Release();
-                        _merged_vertex_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_vertex_count,
-                            sizeof(PolymorphicLight.TriangleLightVertex));
-                        _merged_vertex_buffer_gpu.SetData(merged_vertex_buffer_cpu);
-                        
-                        _merged_index_buffer_gpu?.Release();
-                        _merged_index_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count,
-                            sizeof(int));
-                        _merged_index_buffer_gpu.SetData(merged_index_buffer_cpu);
-                        
-                        _light_task_buffer_gpu?.Release();
-                        _light_task_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, tasks.Count,
-                            sizeof(PrepareLightsTask));
-                        _light_task_buffer_gpu.SetData(tasks);
-                        
-                        _light_data_buffer_gpu?.Release();
-                        _light_data_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3,
-                            sizeof(RAB_LightInfo));
-                        
-                        _geometry_instance_to_light_gpu?.Release();
-                        _geometry_instance_to_light_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
-                            geometry_instance_to_light.Count, sizeof(uint));
-                        _geometry_instance_to_light_gpu.SetData(geometry_instance_to_light);
-                        
-                        _triangle_light_debug_buffer_gpu?.Release();
-                        _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
-                            total_index_count / 3, sizeof(TriangleLightDebug));
-
-                        prepare_polymorphic_light = true; 
+                        tasks.Add(task);
                     }
                 }
-                
+
+                if (total_vertex_count > 0 && total_index_count > 0)
+                {
+                    _polymorphic_light_tlas.Build();
+                    
+                    // 将所有灯光的cpu顶点数据合并到一起
+                    var merged_vertex_buffer_cpu = new PolymorphicLight.TriangleLightVertex[total_vertex_count];
+                    var merged_index_buffer_cpu = new int[total_index_count];
+                    var destination_index = 0;
+                    foreach (var local_vertex_buffer in local_vertex_buffers_cpu)
+                    {
+                        Array.Copy(local_vertex_buffer, 0, merged_vertex_buffer_cpu, destination_index,
+                            local_vertex_buffer.Length);
+                        destination_index += local_vertex_buffer.Length;
+                    }
+
+                    destination_index = 0;
+                    foreach (var local_index_buffer in local_index_buffers_cpu)
+                    {
+                        Array.Copy(local_index_buffer, 0, merged_index_buffer_cpu, destination_index,
+                            local_index_buffer.Length);
+                        destination_index += local_index_buffer.Length;
+                    }
+         
+                    // 将合并后的cpu灯光数据上载到gpu
+                    _merged_vertex_buffer_gpu?.Release();
+                    _merged_vertex_buffer_gpu = new ComputeBuffer(total_vertex_count,
+                        sizeof(PolymorphicLight.TriangleLightVertex), ComputeBufferType.Default);
+                    _merged_vertex_buffer_gpu.SetData(merged_vertex_buffer_cpu);
+
+                    _merged_index_buffer_gpu?.Release();
+                    _merged_index_buffer_gpu = new ComputeBuffer(total_index_count,
+                        sizeof(int), ComputeBufferType.Default);
+                    _merged_index_buffer_gpu.SetData(merged_index_buffer_cpu);
+                    
+                    _light_task_buffer_gpu?.Release();
+                    _light_task_buffer_gpu = new ComputeBuffer(tasks.Count,
+                        sizeof(PrepareLightsTask), ComputeBufferType.Default);
+                    _light_task_buffer_gpu.SetData(tasks);
+
+                    var empty_light_data = new List<RAB_LightInfo>();
+                    for(int i = 0; i < total_index_count / 3; ++i)
+                    {
+                        var info = new RAB_LightInfo();
+                        info.center = Vector3.zero;
+                        info.radiance = new uint2(0u, 0u);
+                        info.debug = Vector4.zero;
+                        info.scalars = 0u;
+                        info.direction1 = 0u;
+                        info.direction2 = 0u;
+                        empty_light_data.Add(info);
+                    }
+                    _light_data_buffer_gpu?.Release();
+                    _light_data_buffer_gpu = new ComputeBuffer(total_index_count / 3,
+                        sizeof(RAB_LightInfo), ComputeBufferType.Default);
+                    _light_data_buffer_gpu.SetData(empty_light_data);
+                    
+                    _geometry_instance_to_light_gpu?.Release();
+                    _geometry_instance_to_light_gpu = new ComputeBuffer(
+                        geometry_instance_to_light.Count, sizeof(uint), ComputeBufferType.Default);
+                    _geometry_instance_to_light_gpu.SetData(geometry_instance_to_light);
+                    
+                    _triangle_light_debug_buffer_gpu?.Release();
+                    _triangle_light_debug_buffer_gpu = new ComputeBuffer(
+                        total_index_count / 3, sizeof(TriangleLightDebug), ComputeBufferType.Default);
+
+                    prepare_polymorphic_light = true; 
+                }
+            }
+            
+            // -----------------------------------------------------------
+            //                          命令录制
+            // -----------------------------------------------------------
+            var cmd = CommandBufferPool.Get("RTXDI Pass");
+
+            using (new ProfilingScope(cmd, new ProfilingSampler("RTXDI: Prepare Polymorphic Lights")))
+            {
                 // Enable/Disable light prepare computation.
                 cmd.SetGlobalInt(GpuParams.HAS_POLYMORPHIC_LIGHTS, prepare_polymorphic_light ? 1 : 0);
                 
@@ -396,14 +423,14 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                 var cameraDescriptor = renderingData.cameraData.cameraTargetDescriptor;
                 cmd.DispatchRays(_rtxdi_raytracing_shader, "RtxdiRayGen", (uint)cameraDescriptor.width, (uint)cameraDescriptor.height, 1);
             }
-            
+
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
 
         public override void FrameCleanup(CommandBuffer cmd)
         {
-            if (DebugLightDataBuffer) OutputLightDataStr();
+            
         }
 
         public void Setup(bool debugLightData) => DebugLightDataBuffer = debugLightData;
