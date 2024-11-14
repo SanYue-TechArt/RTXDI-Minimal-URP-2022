@@ -26,6 +26,8 @@ StructuredBuffer<uint> GeometryInstanceToLight;
 Buffer<float2> NeighborOffsets;
 #define RTXDI_NEIGHBOR_OFFSETS_BUFFER NeighborOffsets
 
+TEXTURE2D_X(_MotionVectorTexture);
+
 TEXTURE2D_X(_CameraDepthTexture);
 TEXTURE2D_X(_GBuffer0);
 TEXTURE2D_X(_GBuffer1);
@@ -318,6 +320,16 @@ void RAB_GetLightDirDistance(RAB_Surface surface, RAB_LightSample lightSample,
     float3 toLight = lightSample.position - surface.worldPos;
     o_lightDistance = length(toLight);
     o_lightDir = toLight / o_lightDistance;
+}
+
+int2 RAB_ClampSamplePositionIntoView(int2 pixelPosition, bool previousFrame)
+{
+    return clamp(pixelPosition, 0, int2(_ScreenParams.xy) - 1);
+}
+
+bool RAB_AreMaterialsSimilar(RAB_Surface a, RAB_Surface b)
+{
+    return true;
 }
 
 // Return PDF wrt solid angle for the BRDF in the given dir

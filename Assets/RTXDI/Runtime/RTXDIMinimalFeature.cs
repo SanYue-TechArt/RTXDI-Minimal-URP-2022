@@ -181,9 +181,14 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         #region [ReSTIR Lighting]
 
+        private const int RTXDI_RESERVOIR_BLOCK_SIZE = 16;
+        
+        private const int NEIGHBOR_OFFSET_COUNT = 8192;
+        private bool _is_neighbor_offset_buffer_created = false;
+        private ComputeBuffer _neighbor_offset_buffer = null;
+        
         private ResamplingConstants _resampling_constants;
         private ComputeBuffer _resampling_constants_buffer = null;
-        private const int RTXDI_RESERVOIR_BLOCK_SIZE = 16;
         private RTHandle _shading_output;
         private RayTracingShader _rtxdi_raytracing_shader = null;
         private RayTracingAccelerationStructure _scene_tlas = null;
@@ -253,9 +258,13 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             _is_pass_executable &= _prepare_light_cs != null;
             FillResamplingConstants(rtxdiSettings, cameraTextureDescriptor.width, cameraTextureDescriptor.height);
 
+            if (_resampling_constants.enableResampling == 1u) ConfigureInput(ScriptableRenderPassInput.Motion);
+
             _resampling_constants_buffer ??=
                 new ComputeBuffer( 1, sizeof(ResamplingConstants), ComputeBufferType.Default);
             _resampling_constants_buffer.SetData(new[] { _resampling_constants });
+
+            InitializeNeighborOffsets();
 
             var shadingOutputDesc = cameraTextureDescriptor;
             shadingOutputDesc.depthBufferBits = 0;
@@ -417,6 +426,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                     cmd.SetRayTracingTextureParam(_rtxdi_raytracing_shader, GpuParams._PreviousGBuffer2, _input_prev_gbuffer2);
                     cmd.SetRayTracingTextureParam(_rtxdi_raytracing_shader, GpuParams._PreviousCameraDepthTexture, _input_prev_depth);
                 }
+
+                cmd.SetRayTracingBufferParam(_rtxdi_raytracing_shader, "NeighborOffsets", _neighbor_offset_buffer);
                 
                 cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.PolymorphicLightTLAS, _polymorphic_light_tlas);
                 cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.SceneTLAS, _scene_tlas);
@@ -449,7 +460,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             _input_prev_depth = prevDepth;
         }
 
-        public void Release()
+        public void Release() 
         {
             _merged_vertex_buffer_gpu?.Release(); _merged_vertex_buffer_gpu = null;
             _merged_index_buffer_gpu?.Release(); _merged_index_buffer_gpu = null;
@@ -458,6 +469,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             _triangle_light_debug_buffer_gpu?.Release(); _triangle_light_debug_buffer_gpu = null;
             _geometry_instance_to_light_gpu?.Release(); _geometry_instance_to_light_gpu = null;
             _resampling_constants_buffer?.Release(); _resampling_constants_buffer = null;
+            _neighbor_offset_buffer?.Release(); _neighbor_offset_buffer = null;
         }
 
         private void FillResamplingConstants(RTXDISettings rtxdiSettings, int renderWidth, int renderHeight)
@@ -537,6 +549,47 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                 var point = new Vector3(0.005f, 0.005f, 0.005f);
                 Debug.Log(point);#1#
             }*/
+        }
+
+        private unsafe void InitializeNeighborOffsets()
+        {
+            if (_is_neighbor_offset_buffer_created) return;
+            
+            var offsets = new Vector2[NEIGHBOR_OFFSET_COUNT];
+            Array.Fill(offsets, Vector2.zero);
+            {
+                int R = 250;
+                const float phi2 = 1.0f / 1.3247179572447f;
+                uint num = 0;
+                float u = 0.5f;
+                float v = 0.5f;
+                while (num < NEIGHBOR_OFFSET_COUNT) 
+                {
+                    u += phi2;
+                    v += phi2 * phi2;
+                    if (u >= 1.0f) u -= 1.0f;
+                    if (v >= 1.0f) v -= 1.0f;
+
+                    float rSq = (u - 0.5f) * (u - 0.5f) + (v - 0.5f) * (v - 0.5f);
+                    if (rSq > 0.25f)
+                        continue;
+
+                    offsets[num++] = new Vector2((u - 0.5f) * R / 128.0f, (v - 0.5f) * R / 128.0f);
+                }
+            } 
+
+            /*var msg = "";
+            foreach (var offset in offsets)
+            {
+                msg += $"{offset}  ";
+            }
+            Debug.Log(msg);*/
+            
+            _neighbor_offset_buffer?.Release();
+            _neighbor_offset_buffer = new ComputeBuffer( NEIGHBOR_OFFSET_COUNT, sizeof(Vector2), ComputeBufferType.Default);
+            _neighbor_offset_buffer.SetData(offsets);
+
+            _is_neighbor_offset_buffer_created = true;
         }
     }
 

@@ -73,12 +73,15 @@ void RtxdiRayGen()
             RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
         }
     }
-
+    
     if(g_Const.enableResampling)
     {
-        /*
-        // Fill out the parameter structure.
-        // Mostly use literal constants for simplicity.
+        // TODO: 使用kMotion?
+        float2 mv           = 0.0f;
+        mv                  *= DispatchRaysDimensions();
+        float depthDiff     = LinearEyeDepth(LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).r, _ZBufferParams) - primarySurface.viewDepth;
+        float3 motionVector = float3(-mv, depthDiff);
+        
         // TODO: 填充参数
         RTXDI_DISpatioTemporalResamplingParameters stparams;
         stparams.screenSpaceMotion              = motionVector;
@@ -101,7 +104,6 @@ void RtxdiRayGen()
         // Call the resampling function, update the reservoir and lightSample variables
         reservoir = RTXDI_DISpatioTemporalResampling(pixelPosition, primarySurface, reservoir,
                 rng, g_Const.runtimeParams, g_Const.restirDIReservoirBufferParams, stparams, temporalSamplePixelPos, lightSample);
-    */
     }
 
     float3 shadingOutput = 0;
@@ -124,7 +126,7 @@ void RtxdiRayGen()
         }
     }
 
-    ShadingOutput[pixelPosition] = float4(shadingOutput, 1);
+    ShadingOutput[pixelPosition] = float4(shadingOutput, abs(RTXDI_NEIGHBOR_OFFSETS_BUFFER[8190].x));
 
     //RTXDI_StoreDIReservoir(reservoir, g_Const.restirDIReservoirBufferParams, pixelPosition, g_Const.outputBufferIndex);
 }
