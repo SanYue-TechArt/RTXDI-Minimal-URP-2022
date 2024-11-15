@@ -73,7 +73,7 @@ void RtxdiRayGen()
             }
         }
         
-        /*if(g_Const.enableResampling)
+        if(g_Const.enableResampling == 1u)
         {
             // TODO: 使用kMotion?
             float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
@@ -103,7 +103,7 @@ void RtxdiRayGen()
             // Call the resampling function, update the reservoir and lightSample variables
             reservoir = RTXDI_DISpatioTemporalResampling(pixelPosition, primarySurface, reservoir,
                     rng, g_Const.runtimeParams, g_Const.restirDIReservoirBufferParams, stparams, temporalSamplePixelPos, lightSample);
-        }*/
+        }
 
         float3 shadingOutput = 0;
 

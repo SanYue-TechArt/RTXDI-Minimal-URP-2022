@@ -24,16 +24,16 @@ MonoBehaviour:
     m_Value: 0
   numInitialSamples:
     m_OverrideState: 1
-    m_Value: 8
+    m_Value: 6
   numInitialBrdfSamples:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 5
   brdfCutoff:
     m_OverrideState: 1
     m_Value: 0
   numSpatialSamples:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 5
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
