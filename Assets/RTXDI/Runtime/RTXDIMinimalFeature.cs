@@ -126,6 +126,17 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             public uint outputBufferIndex;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RTXDI_PackedDIReservoir
+        {
+            uint lightData;
+            uint uvData;
+            uint mVisibility;
+            uint distanceAge;
+            float targetPdf;
+            float weight;
+        }
+
         #endregion
 
         #region [Prepare Polymorphic Lights]
@@ -193,6 +204,9 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         private RayTracingShader _rtxdi_raytracing_shader = null;
         private RayTracingAccelerationStructure _scene_tlas = null;
 
+        private const int NUM_RESTIR_DI_RESERVOIR_BUFFERS = 3;
+        private GraphicsBuffer _light_reservoir_buffer_gpu = null;
+
         #endregion
         
         #region [Previous GBuffer]
@@ -218,6 +232,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             public static readonly int ResampleConstants = Shader.PropertyToID("ResampleConstants");
             public static readonly int LightDataBuffer = Shader.PropertyToID("LightDataBuffer");
             public static readonly int SceneTLAS = Shader.PropertyToID("SceneTLAS");
+            public static readonly int LightReservoirs = Shader.PropertyToID("LightReservoirs");
 
             // Prepare Lights
             public static readonly int HAS_POLYMORPHIC_LIGHTS = Shader.PropertyToID("HAS_POLYMORPHIC_LIGHTS");
@@ -379,6 +394,10 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
                     
                     _triangle_light_debug_buffer_gpu?.Release();
                     _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3, sizeof(TriangleLightDebug));
+                    
+                    _light_reservoir_buffer_gpu?.Release();
+                    _light_reservoir_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)_resampling_constants.restirDIReservoirBufferParams.reservoirArrayPitch * NUM_RESTIR_DI_RESERVOIR_BUFFERS,
+                        sizeof(RTXDI_PackedDIReservoir));
 
                     prepare_polymorphic_light = true; 
                 }
@@ -429,6 +448,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
                 cmd.SetRayTracingBufferParam(_rtxdi_raytracing_shader, "NeighborOffsets", _neighbor_offset_buffer);
                 
+                cmd.SetGlobalBuffer(GpuParams.LightReservoirs, _light_reservoir_buffer_gpu);
                 cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.PolymorphicLightTLAS, _polymorphic_light_tlas);
                 cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.SceneTLAS, _scene_tlas);
                 cmd.SetGlobalBuffer(GpuParams.GeometryInstanceToLight, _geometry_instance_to_light_gpu);
@@ -470,6 +490,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             _geometry_instance_to_light_gpu?.Release(); _geometry_instance_to_light_gpu = null;
             _resampling_constants_buffer?.Release(); _resampling_constants_buffer = null;
             _neighbor_offset_buffer?.Release(); _neighbor_offset_buffer = null;
+            _light_reservoir_buffer_gpu?.Release(); _light_reservoir_buffer_gpu = null;
         }
 
         private void FillResamplingConstants(RTXDISettings rtxdiSettings, int renderWidth, int renderHeight)
@@ -624,10 +645,12 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             // Previous GBuffers.
             var diffuse_descriptor = cameraTextureDescriptor;
             diffuse_descriptor.graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
+            diffuse_descriptor.depthBufferBits = 0;
             RenderingUtils.ReAllocateIfNeeded(ref _prev_gBuffer0, diffuse_descriptor);
 
             var specular_descriptor = cameraTextureDescriptor;
             specular_descriptor.graphicsFormat = GraphicsFormat.R8G8B8A8_UNorm;
+            specular_descriptor.depthBufferBits = 0;
             RenderingUtils.ReAllocateIfNeeded(ref _prev_gBuffer1, specular_descriptor);
             
             var renderer_data = GetRendererDataWithinFeature();
@@ -638,6 +661,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             var normal_descriptor = cameraTextureDescriptor;
             // Reference: DeferredLights.cs - GetGBufferFormat
             normal_descriptor.graphicsFormat = accurate_normal ? GraphicsFormat.R8G8B8A8_UNorm : DepthNormalOnlyPass.GetGraphicsFormat();
+            normal_descriptor.depthBufferBits = 0;
             RenderingUtils.ReAllocateIfNeeded(ref _prev_gBuffer2, normal_descriptor);
 
             var depth_descriptor = cameraTextureDescriptor;
@@ -651,7 +675,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            var cmd = CommandBufferPool.Get("RTXDI Pass");
+            var cmd = CommandBufferPool.Get("RTXDI Pass"); 
             
             using (new ProfilingScope(cmd, new ProfilingSampler("RTXDI: Previous GBuffer Copy")))
             {
