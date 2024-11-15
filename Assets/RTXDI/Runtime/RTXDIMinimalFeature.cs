@@ -639,6 +639,11 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             if (_copy_gbuffer_ps != null) _copy_gbuffer_mat = CoreUtils.CreateEngineMaterial(_copy_gbuffer_ps);
         }
 
+        private static class GpuParams
+        {
+            public static readonly int _BlitScaleBias = Shader.PropertyToID("_BlitScaleBias");
+        }
+
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
             // --------------------------------------
@@ -679,7 +684,9 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
             
             using (new ProfilingScope(cmd, new ProfilingSampler("RTXDI: Previous GBuffer Copy")))
             {
-                cmd.DrawProcedural(Matrix4x4.identity, _copy_gbuffer_mat, 0, MeshTopology.Triangles, 3, 1, new MaterialPropertyBlock());
+                var block = new MaterialPropertyBlock();
+                block.SetVector(GpuParams._BlitScaleBias, new Vector4(1.0f, 1.0f, 0.0f, 0.0f));
+                cmd.DrawProcedural(Matrix4x4.identity, _copy_gbuffer_mat, 0, MeshTopology.Triangles, 3, 1, block);
                 cmd.CopyTexture(renderingData.cameraData.renderer.cameraDepthTargetHandle, _prev_depth);
             }
             
