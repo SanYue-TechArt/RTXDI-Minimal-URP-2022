@@ -26,109 +26,119 @@ void RtxdiRayGen()
     primarySurface.roughness            = 1.0f - gbuffer2.a;
     primarySurface.diffuseProbability   = getSurfaceDiffuseProbability(primarySurface);
 
+    /*ShadingOutput[pixelPosition] = float4(primarySurface.normal, 1);
+    return;*/
+
     RTXDI_DIReservoir reservoir = RTXDI_EmptyDIReservoir();
 
     // Early Out: Not valid reservoir
-    if (!RAB_IsSurfaceValid(primarySurface))
+    if (RAB_IsSurfaceValid(primarySurface))
+    {
+        RAB_RandomSamplerState rng = RAB_InitRandomSampler(pixelPosition, 1);
+
+        RTXDI_SampleParameters sampleParams = RTXDI_InitSampleParameters(
+            g_Const.numInitialSamples,  // local light samples 
+            0,                          // infinite light samples
+            0,                          // environment map samples
+            g_Const.numInitialBRDFSamples,
+            g_Const.brdfCutoff,
+            0.001f);
+
+        // Generate the initial sample
+        RAB_LightSample lightSample = RAB_EmptyLightSample();
+        RTXDI_DIReservoir localReservoir = RTXDI_SampleLocalLights(rng, rng, primarySurface,
+            sampleParams, ReSTIRDI_LocalLightSamplingMode_UNIFORM, lightBufferParams.localLightBufferRegion, lightSample);
+        RTXDI_CombineDIReservoirs(reservoir, localReservoir, 0.5, localReservoir.targetPdf);
+
+        // Resample BRDF samples.
+        RAB_LightSample brdfSample = RAB_EmptyLightSample();
+        RTXDI_DIReservoir brdfReservoir = RTXDI_SampleBrdf(rng, primarySurface, sampleParams, lightBufferParams, brdfSample);
+        bool selectBrdf = RTXDI_CombineDIReservoirs(reservoir, brdfReservoir, RAB_GetNextRandom(rng), brdfReservoir.targetPdf);
+        if (selectBrdf)
+        {
+            lightSample = brdfSample;
+        }
+
+        RTXDI_FinalizeResampling(reservoir, 1.0, 1.0);
+        reservoir.M = 1;
+
+        // BRDF was generated with a trace so no need to trace visibility again
+        if (RTXDI_IsValidDIReservoir(reservoir) && !selectBrdf)
+        {
+            // See if the initial sample is visible from the surface
+            if (!RAB_GetConservativeVisibility(primarySurface, lightSample))
+            {
+                // If not visible, discard the sample (but keep the M)
+                RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
+            }
+        }
+        
+        /*if(g_Const.enableResampling)
+        {
+            // TODO: 使用kMotion?
+            float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
+            mv                  *= DispatchRaysDimensions();
+            float depthDiff     = LinearEyeDepth(LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).r, _ZBufferParams) - primarySurface.viewDepth;
+            float3 motionVector = float3(-mv, depthDiff);
+            
+            // TODO: 填充参数
+            RTXDI_DISpatioTemporalResamplingParameters stparams;
+            stparams.screenSpaceMotion              = motionVector;
+            stparams.sourceBufferIndex              = g_Const.inputBufferIndex;
+            stparams.maxHistoryLength               = 20;
+            stparams.biasCorrectionMode             = g_Const.unbiasedMode ? RTXDI_BIAS_CORRECTION_RAY_TRACED : RTXDI_BIAS_CORRECTION_BASIC;
+            stparams.depthThreshold                 = 0.1;
+            stparams.normalThreshold                = 0.5;
+            stparams.numSamples                     = g_Const.numSpatialSamples + 1;
+            stparams.numDisocclusionBoostSamples    = 0;
+            stparams.samplingRadius                 = 32;
+            stparams.enableVisibilityShortcut       = true;
+            stparams.enablePermutationSampling      = true;
+            stparams.discountNaiveSamples           = false;
+
+            // This variable will receive the position of the sample reused from the previous frame.
+            // It's only needed for gradient evaluation, ignore it here.
+            int2 temporalSamplePixelPos = -1;
+
+            // Call the resampling function, update the reservoir and lightSample variables
+            reservoir = RTXDI_DISpatioTemporalResampling(pixelPosition, primarySurface, reservoir,
+                    rng, g_Const.runtimeParams, g_Const.restirDIReservoirBufferParams, stparams, temporalSamplePixelPos, lightSample);
+        }*/
+
+        float3 shadingOutput = 0;
+
+        // Shade the surface with the selected light sample
+        if (RTXDI_IsValidDIReservoir(reservoir))
+        {
+            // Compute the correctly weighted reflected radiance
+            shadingOutput = ShadeSurfaceWithLightSample(lightSample, primarySurface)
+                          * RTXDI_GetDIReservoirInvPdf(reservoir);
+
+            // Test if the selected light is visible from the surface
+            bool visibility = RAB_GetConservativeVisibility(primarySurface, lightSample);
+
+            // If not visible, discard the shading output and the light sample
+            if (!visibility)
+            {
+                shadingOutput = 0;
+                RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
+            }
+
+            //shadingOutput = float3(0,1,0);
+        }
+        /*else
+        {
+            shadingOutput = 0.0f;
+        }*/
+
+        ShadingOutput[pixelPosition] = float4(shadingOutput, abs(RTXDI_NEIGHBOR_OFFSETS_BUFFER[8190].x));    
+    }
+    else
     {
         ShadingOutput[pixelPosition] = float4(0, 0, 0, 1);
-        return;
     }
 
-    RAB_RandomSamplerState rng = RAB_InitRandomSampler(pixelPosition, 1);
-
-    RTXDI_SampleParameters sampleParams = RTXDI_InitSampleParameters(
-        g_Const.numInitialSamples,  // local light samples 
-        0,                          // infinite light samples
-        0,                          // environment map samples
-        g_Const.numInitialBRDFSamples,
-        g_Const.brdfCutoff,
-        0.001f);
-
-    // Generate the initial sample
-    RAB_LightSample lightSample = RAB_EmptyLightSample();
-    RTXDI_DIReservoir localReservoir = RTXDI_SampleLocalLights(rng, rng, primarySurface,
-        sampleParams, ReSTIRDI_LocalLightSamplingMode_UNIFORM, lightBufferParams.localLightBufferRegion, lightSample);
-    RTXDI_CombineDIReservoirs(reservoir, localReservoir, 0.5, localReservoir.targetPdf);
-
-    // Resample BRDF samples.
-    RAB_LightSample brdfSample = RAB_EmptyLightSample();
-    RTXDI_DIReservoir brdfReservoir = RTXDI_SampleBrdf(rng, primarySurface, sampleParams, lightBufferParams, brdfSample);
-    bool selectBrdf = RTXDI_CombineDIReservoirs(reservoir, brdfReservoir, RAB_GetNextRandom(rng), brdfReservoir.targetPdf);
-    if (selectBrdf)
-    {
-        lightSample = brdfSample;
-    }
-
-    RTXDI_FinalizeResampling(reservoir, 1.0, 1.0);
-    reservoir.M = 1;
-
-    // BRDF was generated with a trace so no need to trace visibility again
-    if (RTXDI_IsValidDIReservoir(reservoir) && !selectBrdf)
-    {
-        // See if the initial sample is visible from the surface
-        if (!RAB_GetConservativeVisibility(primarySurface, lightSample))
-        {
-            // If not visible, discard the sample (but keep the M)
-            RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
-        }
-    }
-    
-    if(g_Const.enableResampling)
-    {
-        // TODO: 使用kMotion?
-        float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
-        mv                  *= DispatchRaysDimensions();
-        float depthDiff     = LinearEyeDepth(LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).r, _ZBufferParams) - primarySurface.viewDepth;
-        float3 motionVector = float3(-mv, depthDiff);
-        
-        // TODO: 填充参数
-        RTXDI_DISpatioTemporalResamplingParameters stparams;
-        stparams.screenSpaceMotion              = motionVector;
-        stparams.sourceBufferIndex              = g_Const.inputBufferIndex;
-        stparams.maxHistoryLength               = 20;
-        stparams.biasCorrectionMode             = g_Const.unbiasedMode ? RTXDI_BIAS_CORRECTION_RAY_TRACED : RTXDI_BIAS_CORRECTION_BASIC;
-        stparams.depthThreshold                 = 0.1;
-        stparams.normalThreshold                = 0.5;
-        stparams.numSamples                     = g_Const.numSpatialSamples + 1;
-        stparams.numDisocclusionBoostSamples    = 0;
-        stparams.samplingRadius                 = 32;
-        stparams.enableVisibilityShortcut       = true;
-        stparams.enablePermutationSampling      = true;
-        stparams.discountNaiveSamples           = false;
-
-        // This variable will receive the position of the sample reused from the previous frame.
-        // It's only needed for gradient evaluation, ignore it here.
-        int2 temporalSamplePixelPos = -1;
-
-        // Call the resampling function, update the reservoir and lightSample variables
-        reservoir = RTXDI_DISpatioTemporalResampling(pixelPosition, primarySurface, reservoir,
-                rng, g_Const.runtimeParams, g_Const.restirDIReservoirBufferParams, stparams, temporalSamplePixelPos, lightSample);
-    }
-
-    float3 shadingOutput = 0;
-
-    // Shade the surface with the selected light sample
-    if (RTXDI_IsValidDIReservoir(reservoir))
-    {
-        // Compute the correctly weighted reflected radiance
-        shadingOutput = ShadeSurfaceWithLightSample(lightSample, primarySurface)
-                      * RTXDI_GetDIReservoirInvPdf(reservoir);
-
-        // Test if the selected light is visible from the surface
-        bool visibility = RAB_GetConservativeVisibility(primarySurface, lightSample);
-
-        // If not visible, discard the shading output and the light sample
-        if (!visibility)
-        {
-            shadingOutput = 0;
-            RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
-        }
-    }
-
-    ShadingOutput[pixelPosition] = float4(shadingOutput, abs(RTXDI_NEIGHBOR_OFFSETS_BUFFER[8190].x));
-
-    //RTXDI_StoreDIReservoir(reservoir, g_Const.restirDIReservoirBufferParams, pixelPosition, g_Const.outputBufferIndex);
+    RTXDI_StoreDIReservoir(reservoir, g_Const.restirDIReservoirBufferParams, pixelPosition, g_Const.outputBufferIndex);
 }
 
 #endif
