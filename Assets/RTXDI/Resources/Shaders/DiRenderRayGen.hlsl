@@ -77,7 +77,7 @@ void RtxdiRayGen()
     if(g_Const.enableResampling)
     {
         // TODO: 使用kMotion?
-        float2 mv           = 0.0f;
+        float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
         mv                  *= DispatchRaysDimensions();
         float depthDiff     = LinearEyeDepth(LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).r, _ZBufferParams) - primarySurface.viewDepth;
         float3 motionVector = float3(-mv, depthDiff);

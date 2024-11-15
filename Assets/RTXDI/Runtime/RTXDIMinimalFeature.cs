@@ -10,9 +10,9 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.Universal.Internal;
 
-public class RTXDIMinimalFeature : ScriptableRendererFeature
+public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 {
-    private class RTXDIPass : ScriptableRenderPass
+    private sealed class RTXDIPass : ScriptableRenderPass
     {
         #region [Structure]
         
@@ -200,9 +200,11 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         
         private ResamplingConstants _resampling_constants;
         private ComputeBuffer _resampling_constants_buffer = null;
-        private RTHandle _shading_output;
         private RayTracingShader _rtxdi_raytracing_shader = null;
         private RayTracingAccelerationStructure _scene_tlas = null;
+
+        public RTHandle GetShadingOutput() => _shading_output;
+        private RTHandle _shading_output;
 
         private const int NUM_RESTIR_DI_RESERVOIR_BUFFERS = 3;
         private GraphicsBuffer _light_reservoir_buffer_gpu = null;
@@ -614,7 +616,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         }
     }
 
-    private class HistoryGBufferPass : ScriptableRenderPass
+    private sealed class HistoryGBufferPass : ScriptableRenderPass
     {
         private RTHandle _prev_gBuffer0 = null; // Albedo
         private RTHandle _prev_gBuffer1 = null; // Specular and Metallic
@@ -704,10 +706,69 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
         }
     }
 
+    private sealed class LightingCompositePass : ScriptableRenderPass
+    {
+        private Shader _lighting_composite_ps;
+        private Material _lighting_composite_mat;
+
+        private RTHandle _scene_color_copy;
+        private RTHandle _input_rtxdi_lighting;
+
+        public LightingCompositePass()
+        {
+            _lighting_composite_ps = Resources.Load<Shader>("Shaders/LightingComposite");
+            _lighting_composite_mat = CoreUtils.CreateEngineMaterial(_lighting_composite_ps);
+        }
+        
+        private static class GpuParams
+        {
+            public static readonly int _BlitScaleBias = Shader.PropertyToID("_BlitScaleBias");
+            public static readonly int _SceneColorSource = Shader.PropertyToID("_SceneColorSource");
+            public static readonly int _LightingTexture = Shader.PropertyToID("_LightingTexture");
+        }
+
+        public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
+        {
+            var scene_color_copy_desc = cameraTextureDescriptor;
+            scene_color_copy_desc.depthBufferBits = 0;
+            RenderingUtils.ReAllocateIfNeeded(ref _scene_color_copy, scene_color_copy_desc);
+        }
+
+        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        {
+            if (_input_rtxdi_lighting == null) return;
+            
+            var cmd = CommandBufferPool.Get("RTXDI Lighting Composite");
+            var renderer = renderingData.cameraData.renderer;
+            {
+                cmd.CopyTexture(renderer.cameraColorTargetHandle, _scene_color_copy);
+                
+                cmd.SetGlobalTexture(GpuParams._SceneColorSource, _scene_color_copy);
+                cmd.SetGlobalTexture(GpuParams._LightingTexture, _input_rtxdi_lighting);
+                cmd.SetRenderTarget(renderer.cameraColorTargetHandle, renderer.cameraDepthTargetHandle);
+                
+                var block = new MaterialPropertyBlock();
+                block.SetVector(GpuParams._BlitScaleBias, new Vector4(1.0f, 1.0f, 0.0f, 0.0f));
+                cmd.DrawProcedural(Matrix4x4.identity, _lighting_composite_mat, 0, MeshTopology.Triangles, 3, 1, block);
+            }
+            context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
+        }
+
+        public void Setup(RTHandle rtxdiLighting) => _input_rtxdi_lighting = rtxdiLighting;
+
+        public void Release()
+        {
+            CoreUtils.Destroy(_lighting_composite_mat);
+            _scene_color_copy?.Release(); _scene_color_copy = null;
+        }
+    }
+
     public bool DebugLightData = false;
     
     private RTXDIPass _rtxdi_pass;
     private HistoryGBufferPass _history_gbuffer_pass;
+    private LightingCompositePass _lighting_composite_pass;
 
     public override void Create()
     {
@@ -719,6 +780,7 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         _rtxdi_pass ??= new RTXDIPass();
         _history_gbuffer_pass ??= new HistoryGBufferPass();
+        _lighting_composite_pass ??= new LightingCompositePass();
     }
 
     private void OnDisable()
@@ -733,6 +795,8 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
+        if (renderingData.cameraData.isPreviewCamera) return;
+        
         _rtxdi_pass.renderPassEvent = RenderPassEvent.AfterRenderingGbuffer + 1;
         _rtxdi_pass.Setup(DebugLightData, _history_gbuffer_pass.GetPrevGBuffer0(), _history_gbuffer_pass.GetPrevGBuffer1(),
             _history_gbuffer_pass.GetPrevGBuffer2(), _history_gbuffer_pass.GetPrevDepth());
@@ -740,12 +804,17 @@ public class RTXDIMinimalFeature : ScriptableRendererFeature
 
         _history_gbuffer_pass.renderPassEvent = _rtxdi_pass.renderPassEvent + 1;
         renderer.EnqueuePass(_history_gbuffer_pass);
+
+        _lighting_composite_pass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        _lighting_composite_pass.Setup(_rtxdi_pass.GetShadingOutput());
+        renderer.EnqueuePass(_lighting_composite_pass);
     }
 
     private void SafeReleaseFeatureResources()
     {
         _rtxdi_pass?.Release(); _rtxdi_pass = null;
         _history_gbuffer_pass?.Release(); _history_gbuffer_pass = null;
+        _lighting_composite_pass?.Release(); _lighting_composite_pass = null;
     }
 
     [CanBeNull]
