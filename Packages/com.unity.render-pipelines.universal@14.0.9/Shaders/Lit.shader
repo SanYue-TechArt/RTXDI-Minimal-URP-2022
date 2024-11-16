@@ -181,6 +181,7 @@ Shader "Universal Render Pipeline/Lit"
 
             #pragma raytracing test // test和任何内容无关，加此行只是为了通过编译
 
+            #include "Assets/RTXDI/Resources/Shaders/RtxdiApplicationBridge.hlsl"
             #include "UnityRaytracingMeshUtils.cginc"
 
             // 重心坐标插值
@@ -189,13 +190,8 @@ Shader "Universal Render Pipeline/Lit"
                 float2 barycentrics;
             };
 
-            struct VisibilityRayPayload
-            {
-                bool isHit;
-            };
-
             [shader("closesthit")]
-            void ClosestHitShader(inout VisibilityRayPayload payload : SV_RayPayload,
+            void ClosestHitShader(inout RayPayload payload : SV_RayPayload,
                 AttributeData attributeData : SV_IntersectionAttributes)
             {
                 payload.isHit = true;

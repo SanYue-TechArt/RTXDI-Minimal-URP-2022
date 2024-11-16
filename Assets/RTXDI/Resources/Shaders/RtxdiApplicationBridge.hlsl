@@ -22,7 +22,6 @@ RaytracingAccelerationStructure SceneTLAS;
 
 StructuredBuffer<uint> GeometryInstanceToLight;
 
-// TODO:填充Buffer
 Buffer<float2> NeighborOffsets;
 #define RTXDI_NEIGHBOR_OFFSETS_BUFFER NeighborOffsets
 
@@ -33,7 +32,6 @@ TEXTURE2D_X(_GBuffer0);
 TEXTURE2D_X(_GBuffer1);
 TEXTURE2D_X(_GBuffer2);
 
-// TODO:填充Prev Info
 TEXTURE2D_X(_PreviousCameraDepthTexture);
 TEXTURE2D_X(_PreviousGBuffer0);
 TEXTURE2D_X(_PreviousGBuffer1);
@@ -383,11 +381,12 @@ RAB_LightInfo RAB_LoadLightInfo(uint index, bool previousFrame)
     return LightDataBuffer[index];
 }
 
-struct PolymorphicLightRayPayload
+struct RayPayload
 {
-    bool    hitLight;
-    uint    lightIndex;
-    float2  hitUV;
+    bool    isHit;      // Common
+    
+    uint    lightIndex; // Just for polymorphic light tracing
+    float2  hitUV;      // Just for polymorphic light tracing
 };
 
 // Return true if anything was hit. If false, RTXDI will do environment map sampling
@@ -405,13 +404,15 @@ bool RAB_TraceRayForLocalLight(float3 origin, float3 direction, float tMin, floa
     rayDesc.TMin        = tMin;
     rayDesc.TMax        = tMax;
 
-    PolymorphicLightRayPayload payload;
-    payload.hitLight    = false;
-    payload.lightIndex  = RTXDI_InvalidLightIndex;
+    RayPayload payload;
+    payload.isHit       = false;
+    payload.lightIndex  = RTXDI_INVALID_LIGHT_INDEX;
+    payload.hitUV       = 0.0f;
 
-    TraceRay(PolymorphicLightTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
+    //TraceRay(PolymorphicLightTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
+    TraceRay(SceneTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
     
-    if (payload.hitLight)
+    if (payload.isHit)
     {
         o_lightIndex = payload.lightIndex;
         if (o_lightIndex != RTXDI_InvalidLightIndex)
@@ -421,13 +422,8 @@ bool RAB_TraceRayForLocalLight(float3 origin, float3 direction, float tMin, floa
         }
     }
 
-    return payload.hitLight;
+    return payload.isHit;
 }
-
-struct VisibilityRayPayload
-{
-    bool isHit;
-};
 
 RayDesc setupVisibilityRay(RAB_Surface surface, RAB_LightSample lightSample, float offset = 0.001)
 {
@@ -448,8 +444,10 @@ bool RAB_GetConservativeVisibility(RAB_Surface surface, RAB_LightSample lightSam
 {
     RayDesc rayDesc = setupVisibilityRay(surface, lightSample);
 
-    VisibilityRayPayload payload;
-    payload.isHit = false;
+    RayPayload payload;
+    payload.isHit       = false;
+    payload.lightIndex  = RTXDI_INVALID_LIGHT_INDEX;
+    payload.hitUV       = 0.0f;
 
     TraceRay(SceneTLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 1, 0, rayDesc, payload);
     

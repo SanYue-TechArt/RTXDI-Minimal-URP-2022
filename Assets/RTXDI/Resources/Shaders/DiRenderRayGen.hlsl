@@ -26,9 +26,6 @@ void RtxdiRayGen()
     primarySurface.roughness            = 1.0f - gbuffer2.a;
     primarySurface.diffuseProbability   = getSurfaceDiffuseProbability(primarySurface);
 
-    /*ShadingOutput[pixelPosition] = float4(primarySurface.normal, 1);
-    return;*/
-
     RTXDI_DIReservoir reservoir = RTXDI_EmptyDIReservoir();
 
     // Early Out: Not valid reservoir
@@ -73,7 +70,7 @@ void RtxdiRayGen()
             }
         }
         
-        if(g_Const.enableResampling == 1u)
+        /*if(g_Const.enableResampling == 1u)
         {
             // TODO: 使用kMotion?
             float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
@@ -103,7 +100,7 @@ void RtxdiRayGen()
             // Call the resampling function, update the reservoir and lightSample variables
             reservoir = RTXDI_DISpatioTemporalResampling(pixelPosition, primarySurface, reservoir,
                     rng, g_Const.runtimeParams, g_Const.restirDIReservoirBufferParams, stparams, temporalSamplePixelPos, lightSample);
-        }
+        }*/
 
         float3 shadingOutput = 0;
 
@@ -123,15 +120,11 @@ void RtxdiRayGen()
                 shadingOutput = 0;
                 RTXDI_StoreVisibilityInDIReservoir(reservoir, 0, true);
             }
-
-            //shadingOutput = float3(0,1,0);
         }
-        /*else
-        {
-            shadingOutput = 0.0f;
-        }*/
 
-        ShadingOutput[pixelPosition] = float4(shadingOutput, abs(RTXDI_NEIGHBOR_OFFSETS_BUFFER[8190].x));    
+        //shadingOutput = RAB_GetConservativeVisibility(primarySurface, lightSample) ? float3(0,1,0) : float3(1,0,0);
+
+        ShadingOutput[pixelPosition] = float4(shadingOutput, 1.0f);    
     }
     else
     {
@@ -139,6 +132,12 @@ void RtxdiRayGen()
     }
 
     RTXDI_StoreDIReservoir(reservoir, g_Const.restirDIReservoirBufferParams, pixelPosition, g_Const.outputBufferIndex);
+}
+
+[shader("miss")]
+void MissShader(inout RayPayload rayIntersection : SV_RayPayload)
+{
+
 }
 
 #endif

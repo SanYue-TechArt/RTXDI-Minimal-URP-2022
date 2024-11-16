@@ -3,7 +3,7 @@ Shader "Universal Render Pipeline/Unlit For Polymorphic Light"
     Properties
     {
         [MainTexture] _BaseMap("Texture", 2D) = "white" {}
-        [MainColor] _BaseColor("Color", Color) = (1, 1, 1, 1)
+        [MainColor] [HDR]_BaseColor("Color", Color) = (1, 1, 1, 1)
         _Cutoff("AlphaCutout", Range(0.0, 1.0)) = 0.5
 
         // BlendMode
@@ -91,8 +91,8 @@ Shader "Universal Render Pipeline/Unlit For Polymorphic Light"
         // Used by RTXDI BRDF tracing for light
         Pass
         {
-            Name "BRDFTracingForLight"
-            Tags { "LightMode" = "BRDFTracingForLight" }
+            Name "RTXDIVisibilityTracing"
+            Tags { "LightMode" = "RTXDIVisibilityTracing" }
             
             HLSLPROGRAM
 
@@ -139,12 +139,12 @@ Shader "Universal Render Pipeline/Unlit For Polymorphic Light"
             }
 
             [shader("closesthit")]
-            void ClosestHitShader(inout PolymorphicLightRayPayload payload : SV_RayPayload, AttributeData attributeData : SV_IntersectionAttributes)
+            void ClosestHitShader(inout RayPayload payload : SV_RayPayload, AttributeData attributeData : SV_IntersectionAttributes)
             {
                 IntersectionVertex vertex = (IntersectionVertex)0.0f;
                 GetCurrentIntersectionVertex(attributeData, vertex);
                 
-                payload.hitLight    = true;
+                payload.isHit       = true;
                 payload.lightIndex  = GeometryInstanceToLight[InstanceIndex()] + PrimitiveIndex();
                 payload.hitUV       = vertex.uv;
             }

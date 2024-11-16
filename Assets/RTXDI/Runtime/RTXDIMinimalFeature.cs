@@ -154,7 +154,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
         private GraphicsBuffer _triangle_light_debug_buffer_gpu = null;
         private RTXDI_LightBufferParameters _light_buffer_parameters;
-        private RayTracingAccelerationStructure _polymorphic_light_tlas = null;
 
         private Vector3 octToNdirSigned(Vector2 p)
         {
@@ -228,13 +227,13 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
         private static class GpuParams
         {
             // Buffer & Textures & TLAS
-            public static readonly int PolymorphicLightTLAS = Shader.PropertyToID("PolymorphicLightTLAS");
             public static readonly int GeometryInstanceToLight = Shader.PropertyToID("GeometryInstanceToLight");
             public static readonly int ShadingOutput = Shader.PropertyToID("ShadingOutput");
             public static readonly int ResampleConstants = Shader.PropertyToID("ResampleConstants");
             public static readonly int LightDataBuffer = Shader.PropertyToID("LightDataBuffer");
             public static readonly int SceneTLAS = Shader.PropertyToID("SceneTLAS");
             public static readonly int LightReservoirs = Shader.PropertyToID("LightReservoirs");
+            public static readonly int NeighborOffsets = Shader.PropertyToID("NeighborOffsets");
 
             // Prepare Lights
             public static readonly int HAS_POLYMORPHIC_LIGHTS = Shader.PropertyToID("HAS_POLYMORPHIC_LIGHTS");
@@ -258,8 +257,10 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             if (_prepare_light_cs != null) _prepare_light_kernel = _prepare_light_cs.FindKernel("PrepareLights");
 
             _light_buffer_parameters = new RTXDI_LightBufferParameters();
-            _polymorphic_light_tlas = new RayTracingAccelerationStructure();
-            _scene_tlas = new RayTracingAccelerationStructure();
+
+            RayTracingAccelerationStructure.RASSettings setting = new RayTracingAccelerationStructure.RASSettings
+                (RayTracingAccelerationStructure.ManagementMode.Automatic, RayTracingAccelerationStructure.RayTracingModeMask.Everything,  255);
+            _scene_tlas = new RayTracingAccelerationStructure(setting);
         }
 
         public override unsafe void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
@@ -307,8 +308,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             if (DebugLightDataBuffer) OutputLightDataStr();
             
             {
-                _polymorphic_light_tlas.ClearInstances();
-                
                 var polyLights = FindObjectsByType<PolymorphicLight>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 
                 // 收集每一盏灯光的cpu端顶点数据
@@ -338,11 +337,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                         task.triangleCount = (uint)(index_buffer.Length / 3);
                         task.padding = uint3.zero;
                         task.localToWorld = polyLight.transform.localToWorldMatrix;
-
-                        _polymorphic_light_tlas.AddInstance(mesh_renderer, new []
-                        {
-                            RayTracingSubMeshFlags.ClosestHitOnly
-                        });
+                        
                         geometry_instance_to_light.Add(light_buffer_offset);
 
                         light_buffer_offset += task.triangleCount;
@@ -353,8 +348,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
                 if (total_vertex_count > 0 && total_index_count > 0)
                 {
-                    _polymorphic_light_tlas.Build();
-                    
                     // 将所有灯光的cpu顶点数据合并到一起
                     var merged_vertex_buffer_cpu = new PolymorphicLight.TriangleLightVertex[total_vertex_count];
                     var merged_index_buffer_cpu = new int[total_index_count];
@@ -448,11 +441,11 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                     cmd.SetRayTracingTextureParam(_rtxdi_raytracing_shader, GpuParams._PreviousCameraDepthTexture, _input_prev_depth);
                 }
 
-                cmd.SetRayTracingBufferParam(_rtxdi_raytracing_shader, "NeighborOffsets", _neighbor_offset_buffer);
+                cmd.SetRayTracingBufferParam(_rtxdi_raytracing_shader, GpuParams.NeighborOffsets, _neighbor_offset_buffer);
                 
                 cmd.SetGlobalBuffer(GpuParams.LightReservoirs, _light_reservoir_buffer_gpu);
-                cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.PolymorphicLightTLAS, _polymorphic_light_tlas);
                 cmd.SetRayTracingAccelerationStructure(_rtxdi_raytracing_shader, GpuParams.SceneTLAS, _scene_tlas);
+                cmd.SetRayTracingShaderPass(_rtxdi_raytracing_shader, "RTXDIVisibilityTracing");
                 cmd.SetGlobalBuffer(GpuParams.GeometryInstanceToLight, _geometry_instance_to_light_gpu);
                 cmd.SetGlobalBuffer(GpuParams.ResampleConstants, _resampling_constants_buffer);
                 cmd.SetGlobalBuffer(GpuParams.LightDataBuffer, _light_data_buffer_gpu);
@@ -493,6 +486,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _resampling_constants_buffer?.Release(); _resampling_constants_buffer = null;
             _neighbor_offset_buffer?.Release(); _neighbor_offset_buffer = null;
             _light_reservoir_buffer_gpu?.Release(); _light_reservoir_buffer_gpu = null;
+            _scene_tlas?.Release(); _scene_tlas = null;
         }
 
         private void FillResamplingConstants(RTXDISettings rtxdiSettings, int renderWidth, int renderHeight)

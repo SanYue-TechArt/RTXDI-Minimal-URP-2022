@@ -7,12 +7,15 @@ using UnityEngine.Rendering;
 [ExecuteAlways]
 public class PolymorphicLight : MonoBehaviour
 {
-    public bool IsValid() => _mesh_filter != null && _mesh_filter.sharedMesh != null && _mesh_renderer != null;
+    public bool IsValid() => _mesh_filter != null && _mesh_filter.sharedMesh != null && _mesh_renderer != null && _material != null;
 
     [CanBeNull]
     public Mesh GetMesh() => IsValid() ? _mesh_filter.sharedMesh : null;
 
-    public Vector3 GetLightColor() => new Vector3(LightColor.r, LightColor.g, LightColor.b) * LightIntensity;
+    public Vector3 GetLightColor() => new Vector3(_light_color.r, _light_color.g, _light_color.b);
+
+    [CanBeNull]
+    public Texture2D GetEmissiveTexture() => IsValid() ? _material.GetTexture(MaterialParam._BaseMap) as Texture2D : null;
 
     [CanBeNull]
     public MeshRenderer GetMeshRenderer() => _mesh_renderer;
@@ -131,25 +134,39 @@ public class PolymorphicLight : MonoBehaviour
 
     #endregion
 
-    public Color LightColor = Color.white;
-    
-    [Range(0.0f, 10.0f)]
-    public float LightIntensity = 1.0f;
+    private Color _light_color = Color.black;
 
     private MeshFilter _mesh_filter;
     private MeshRenderer _mesh_renderer;
+    private Material _material;
+
+    private static class MaterialParam
+    {
+        public static readonly int _BaseColor = Shader.PropertyToID("_BaseColor");
+        public static readonly int _BaseMap = Shader.PropertyToID("_BaseMap");
+    }
 
     void OnEnable()
     {
-        _mesh_filter = gameObject.GetComponent<MeshFilter>();
-        _mesh_renderer = gameObject.GetComponent<MeshRenderer>();
-
         /*DebugCpuVertexBuffer();
         DebugCpuIndexBuffer();*/
     }
 
     void Update()
     {
+        RecollectAllComponents();
+        if (!IsValid()) return;
         
+        if (_material.HasProperty(MaterialParam._BaseColor))
+            _light_color = _material.GetColor(MaterialParam._BaseColor);
+        else
+            _light_color = Color.black;
+    }
+    
+    public void RecollectAllComponents()
+    {
+        _mesh_filter = gameObject.GetComponent<MeshFilter>();
+        _mesh_renderer = gameObject.GetComponent<MeshRenderer>();
+        if (_mesh_renderer != null) _material = _mesh_renderer.sharedMaterial;
     }
 }
