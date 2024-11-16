@@ -23,6 +23,8 @@ StructuredBuffer<int>                   LightIndexBuffer;
 RWStructuredBuffer<RAB_LightInfo>       LightDataBuffer;
 RWStructuredBuffer<TriangleLightDebug>       TriangleLightDebugBuffer;
 
+TEXTURE2D_ARRAY(EmissiveTextureArray); SAMPLER(sampler_LinearClamp);
+
 bool FindTask(uint dispatchThreadId, out PrepareLightsTask task)
 {
     // Use binary search to find the task that contains the current thread's output index:
@@ -91,6 +93,62 @@ void PrepareLights (uint dispatchThreadId : SV_DispatchThreadID, uint groupThrea
         float3 worldPos2 = mul(task.localToWorld, float4(vertices[2].position, 1.0)).xyz;
 
         float3 radiance = max(task.emissiveColor, 0.0f);
+
+        if(task.emissiveTextureIndex != -1)
+        {
+            float2 uvs[3];
+            uvs[0] = vertices[0].uv;
+            uvs[1] = vertices[1].uv;
+            uvs[2] = vertices[2].uv;
+
+            // Calculate the triangle edges and edge lengths in UV space
+            float2 edges[3];
+            edges[0] = uvs[1] - uvs[0];
+            edges[1] = uvs[2] - uvs[1];
+            edges[2] = uvs[0] - uvs[2];
+
+            float3 edgeLengths;
+            edgeLengths[0] = length(edges[0]);
+            edgeLengths[1] = length(edges[1]);
+            edgeLengths[2] = length(edges[2]);
+
+            // Find the shortest edge and the other two (longer) edges
+            float2 shortEdge;
+            float2 longEdge1;
+            float2 longEdge2;
+
+            if (edgeLengths[0] < edgeLengths[1] && edgeLengths[0] < edgeLengths[2])
+            {
+                shortEdge = edges[0];
+                longEdge1 = edges[1];
+                longEdge2 = edges[2];
+            }
+            else if (edgeLengths[1] < edgeLengths[2])
+            {
+                shortEdge = edges[1];
+                longEdge1 = edges[2];
+                longEdge2 = edges[0];
+            }
+            else
+            {
+                shortEdge = edges[2];
+                longEdge1 = edges[0];
+                longEdge2 = edges[1];
+            }
+
+            // Use anisotropic sampling with the sample ellipse axes parallel to the short edge
+            // and the median from the opposite vertex to the short edge.
+            // This ellipse is roughly inscribed into the triangle and approximates long or skinny
+            // triangles with highly anisotropic sampling, and is mostly round for usual triangles.
+            float2 shortGradient = shortEdge * (2.0 / 3.0);
+            float2 longGradient = (longEdge1 + longEdge2) / 3.0;
+
+            // Sample
+            float3 centerUV     = float3((uvs[0] + uvs[1] + uvs[2]) / 3.0, task.emissiveTextureIndex);
+            float3 emissiveMask = EmissiveTextureArray.SampleGrad(sampler_LinearClamp, centerUV, shortGradient, longGradient).rgb;
+
+            radiance *= emissiveMask;
+        }
 
         TriangleLight triLight;
         triLight.base       = worldPos0;

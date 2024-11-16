@@ -18,6 +18,8 @@ struct PrepareLightsTask
     uint        lightBufferOffset;
     uint3       padding;
     float4x4    localToWorld;
+    int         emissiveTextureIndex;
+    uint3       padding2;
 };
 
 struct ResamplingConstants
