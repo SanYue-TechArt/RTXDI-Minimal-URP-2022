@@ -354,7 +354,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             // 按需分配ReSTIR Lighting Texture
             var shadingOutputDesc = cameraTextureDescriptor;
             shadingOutputDesc.depthBufferBits = 0;
-            shadingOutputDesc.graphicsFormat = GraphicsFormat.R8G8B8A8_SRGB;
+            shadingOutputDesc.graphicsFormat = GraphicsFormat.B10G11R11_UFloatPack32;
             shadingOutputDesc.autoGenerateMips = false;
             shadingOutputDesc.useMipMap = false;
             shadingOutputDesc.enableRandomWrite = true;
@@ -751,10 +751,10 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
         private void ReleaseAllHistoryBuffers()
         {
-            _prev_gBuffer0.Release(); _prev_gBuffer0 = null;
-            _prev_gBuffer1.Release(); _prev_gBuffer1 = null;
-            _prev_gBuffer2.Release(); _prev_gBuffer2 = null;
-            _prev_depth.Release(); _prev_depth = null;
+            _prev_gBuffer0?.Release(); _prev_gBuffer0 = null;
+            _prev_gBuffer1?.Release(); _prev_gBuffer1 = null;
+            _prev_gBuffer2?.Release(); _prev_gBuffer2 = null;
+            _prev_depth?.Release(); _prev_depth = null;
         }
     }
 
@@ -835,12 +835,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
         _lighting_composite_pass ??= new LightingCompositePass();
     }
 
-    private void OnDisable()
-    {
-        SafeReleaseFeatureResources();
-    }
-
-    private void OnDestroy()
+    protected override void Dispose(bool disposing)
     {
         SafeReleaseFeatureResources();
     }

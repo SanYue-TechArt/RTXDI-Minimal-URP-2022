@@ -10,7 +10,7 @@ RWStructuredBuffer<ResamplingConstants> ResampleConstants;
 #define g_Const ResampleConstants[0]
 
 // 光照结果
-RWTexture2D<float4> ShadingOutput;
+RWTexture2D<float3> ShadingOutput;
 
 RWStructuredBuffer<RTXDI_PackedDIReservoir> LightReservoirs;
 #define RTXDI_LIGHT_RESERVOIR_BUFFER LightReservoirs
@@ -352,7 +352,6 @@ float3 ShadeSurfaceWithLightSample(RAB_LightSample lightSample, RAB_Surface surf
     // Ignore light samples that are below the geometric surface (but above the normal mapped surface)
     if (dot(L, surface.geoNormal) <= 0)
         return 0;
-
 
     float3 V = surface.viewDir;
     

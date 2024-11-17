@@ -124,11 +124,11 @@ void RtxdiRayGen()
 
         //shadingOutput = RAB_GetConservativeVisibility(primarySurface, lightSample) ? float3(0,1,0) : float3(1,0,0);
 
-        ShadingOutput[pixelPosition] = float4(shadingOutput, 1.0f);    
+        ShadingOutput[pixelPosition] = shadingOutput;    
     }
     else
     {
-        ShadingOutput[pixelPosition] = float4(0, 0, 0, 1);
+        ShadingOutput[pixelPosition] = 0.0f;
     }
 
     RTXDI_StoreDIReservoir(reservoir, g_Const.restirDIReservoirBufferParams, pixelPosition, g_Const.outputBufferIndex);
