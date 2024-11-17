@@ -25,7 +25,7 @@ StructuredBuffer<uint> GeometryInstanceToLight;
 Buffer<float2> NeighborOffsets;
 #define RTXDI_NEIGHBOR_OFFSETS_BUFFER NeighborOffsets
 
-//TEXTURE2D_X(_MotionVectorTexture);
+TEXTURE2D_X(_MotionVectorTexture);
 
 TEXTURE2D_X(_CameraDepthTexture);
 TEXTURE2D_X(_GBuffer0);

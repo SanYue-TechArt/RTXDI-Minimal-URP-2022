@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "com.kink3d.motion": {
+      "version": "https://github.com/Kink3d/kMotion.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.render-pipelines.universal": "7.x.x"
+      },
+      "hash": "b5a00348ce18f3382af5861e6dca9011ae956404"
+    },
     "com.unity.burst": {
       "version": "1.8.11",
       "depth": 1,
@@ -160,9 +169,9 @@
       "depth": 0,
       "source": "registry",
       "dependencies": {
-        "com.unity.settings-manager": "1.0.3",
+        "com.unity.ugui": "1.0.0",
         "com.unity.mathematics": "1.2.1",
-        "com.unity.ugui": "1.0.0"
+        "com.unity.settings-manager": "1.0.3"
       },
       "url": "https://packages.unity.com"
     },

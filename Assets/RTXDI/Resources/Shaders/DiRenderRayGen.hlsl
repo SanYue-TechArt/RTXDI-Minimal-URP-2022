@@ -27,8 +27,7 @@ void RtxdiRayGen()
     primarySurface.diffuseProbability   = getSurfaceDiffuseProbability(primarySurface);
 
     RTXDI_DIReservoir reservoir = RTXDI_EmptyDIReservoir();
-
-    // Early Out: Not valid reservoir
+    
     if (RAB_IsSurfaceValid(primarySurface))
     {
         RAB_RandomSamplerState rng = RAB_InitRandomSampler(pixelPosition, 1);
@@ -70,10 +69,9 @@ void RtxdiRayGen()
             }
         }
         
-        if(false)
+        if(g_Const.enableResampling)
         {
-            // TODO: 使用kMotion?
-            float2 mv           = 0.0f;
+            float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
             mv                  *= DispatchRaysDimensions();
             float depthDiff     = LinearEyeDepth(LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).r, _ZBufferParams) - primarySurface.viewDepth;
             float3 motionVector = float3(-mv, depthDiff);
@@ -122,9 +120,7 @@ void RtxdiRayGen()
             }
         }
 
-        //shadingOutput = RAB_GetConservativeVisibility(primarySurface, lightSample) ? float3(0,1,0) : float3(1,0,0);
-
-        ShadingOutput[pixelPosition] = shadingOutput;    
+        ShadingOutput[pixelPosition] = shadingOutput;   
     }
     else
     {

@@ -347,7 +347,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
             // 推送GPU常量
             FillResamplingConstants(rtxdiSettings, cameraTextureDescriptor.width, cameraTextureDescriptor.height);
-            if (_resampling_constants.enableResampling == 1u) ConfigureInput(ScriptableRenderPassInput.Motion);
 
             #region 重新分配GPU Resource
             
@@ -446,7 +445,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             {
                 _prepare_light_context._last_emissive_textures_cpu.Clear();
             }
-            
+
             #endregion
         }
 
@@ -539,7 +538,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
             // 更新Resampling Constants（整个RTXDI过程用到的唯一GPU全局Constant Buffer）
             _resampling_constants.runtimeParams.activeCheckerboardField = 0;
-            _resampling_constants.runtimeParams.neighborOffsetMask = 8192 - 1; // NeighborOffsetCount = 8192
+            _resampling_constants.runtimeParams.neighborOffsetMask = NEIGHBOR_OFFSET_COUNT - 1; // NeighborOffsetCount = 8192
             _resampling_constants.runtimeParams.pad1 = 0;
             _resampling_constants.runtimeParams.pad2 = 0;
 
