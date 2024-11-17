@@ -356,7 +356,7 @@ float3 ShadeSurfaceWithLightSample(RAB_LightSample lightSample, RAB_Surface surf
     float3 V = surface.viewDir;
     
     // Evaluate the BRDF
-    float diffuse = max(0, -dot(surface.normal, -L)) / PI;
+    float diffuse = max(0, -dot(surface.normal, -L));
     float3 specular = GGX_times_NdotL(V, L, surface.normal, max(surface.roughness, kMinRoughness), surface.specularF0);
 
     float3 reflectedRadiance = lightSample.radiance * (diffuse * surface.diffuseAlbedo + specular);
