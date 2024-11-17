@@ -25,7 +25,7 @@ StructuredBuffer<uint> GeometryInstanceToLight;
 Buffer<float2> NeighborOffsets;
 #define RTXDI_NEIGHBOR_OFFSETS_BUFFER NeighborOffsets
 
-TEXTURE2D_X(_MotionVectorTexture);
+//TEXTURE2D_X(_MotionVectorTexture);
 
 TEXTURE2D_X(_CameraDepthTexture);
 TEXTURE2D_X(_GBuffer0);
@@ -384,7 +384,8 @@ RAB_LightInfo RAB_LoadLightInfo(uint index, bool previousFrame)
 struct RayPayload
 {
     bool    isHit;      // Common
-    
+
+    bool    isBrdfLightTracing;
     uint    lightIndex; // Just for polymorphic light tracing
     float2  hitUV;      // Just for polymorphic light tracing
 };
@@ -406,6 +407,7 @@ bool RAB_TraceRayForLocalLight(float3 origin, float3 direction, float tMin, floa
 
     RayPayload payload;
     payload.isHit       = false;
+    payload.isBrdfLightTracing = true;
     payload.lightIndex  = RTXDI_INVALID_LIGHT_INDEX;
     payload.hitUV       = 0.0f;
 
@@ -446,6 +448,7 @@ bool RAB_GetConservativeVisibility(RAB_Surface surface, RAB_LightSample lightSam
 
     RayPayload payload;
     payload.isHit       = false;
+    payload.isBrdfLightTracing = false;
     payload.lightIndex  = RTXDI_INVALID_LIGHT_INDEX;
     payload.hitUV       = 0.0f;
 

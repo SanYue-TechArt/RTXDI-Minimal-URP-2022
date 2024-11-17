@@ -22,11 +22,13 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
         {
             public Vector3 emissiveColor;
             public uint triangleCount;
+            
             public uint lightBufferOffset;
-            public uint3 padding;
-            public float4x4 localToWorld;
+            public uint vertexOffset;
             public int emissiveTextureIndex;
-            public uint3 padding2;
+            public uint padding;
+            
+            public float4x4 localToWorld;
         }
         
         [StructLayout(LayoutKind.Sequential)]
@@ -273,11 +275,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
         public override unsafe void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            base.Configure(cmd, cameraTextureDescriptor);
-
-            // -----------------------------------------------------------
-            //         填充全局常量，申请RT (Shading RT, Reservoir RT)
-            // -----------------------------------------------------------
             var rtxdiSettings = VolumeManager.instance.stack.GetComponent<RTXDISettings>();
             _is_pass_executable = rtxdiSettings != null && rtxdiSettings.IsActive();
             _is_pass_executable &= _rtxdi_raytracing_shader != null;
@@ -294,7 +291,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
             var shadingOutputDesc = cameraTextureDescriptor;
             shadingOutputDesc.depthBufferBits = 0;
-            shadingOutputDesc.graphicsFormat = GraphicsFormat.R16G16B16A16_SFloat;
+            shadingOutputDesc.graphicsFormat = GraphicsFormat.R8G8B8A8_SRGB;
             shadingOutputDesc.autoGenerateMips = false;
             shadingOutputDesc.useMipMap = false;
             shadingOutputDesc.enableRandomWrite = true;
@@ -337,28 +334,36 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                     {
                         local_vertex_buffers_cpu.Add(vertex_buffer);
                         local_index_buffers_cpu.Add(index_buffer);
-                        total_vertex_count += vertex_buffer.Length;
-                        total_index_count += index_buffer.Length;
 
                         var emissive_texture = polyLight.GetEmissiveTexture();
                         if (emissive_texture != null) local_emissive_textures_cpu.Add(emissive_texture);
 
                         PrepareLightsTask task;
                         task.emissiveColor = polyLight.GetLightColor();
-                        task.lightBufferOffset = light_buffer_offset;
                         task.triangleCount = (uint)(index_buffer.Length / 3);
-                        task.padding = uint3.zero;
-                        task.localToWorld = polyLight.transform.localToWorldMatrix;
+                        task.lightBufferOffset = light_buffer_offset;
+                        task.vertexOffset = (uint)total_vertex_count;
                         task.emissiveTextureIndex = emissive_texture == null ? -1 : (local_emissive_textures_cpu.Count - 1);
-                        task.padding2 = uint3.zero;
+                        task.padding = 0u;
+                        task.localToWorld = polyLight.transform.localToWorldMatrix;
 
                         geometry_instance_to_light.Add(light_buffer_offset);
 
+                        // light_buffer_offset同时也是total_triangle_count
                         light_buffer_offset += task.triangleCount;
+                        total_vertex_count += vertex_buffer.Length;
+                        total_index_count += index_buffer.Length;
 
                         tasks.Add(task);
                     }
                 }
+                
+                _light_buffer_parameters.localLightBufferRegion.firstLightIndex = 0;
+                _light_buffer_parameters.localLightBufferRegion.numLights = light_buffer_offset;
+                _light_buffer_parameters.infiniteLightBufferRegion.firstLightIndex = 0;
+                _light_buffer_parameters.infiniteLightBufferRegion.numLights = 0;
+                _light_buffer_parameters.environmentLightParams.lightIndex = 0xffffffffu; // INVALID
+                _light_buffer_parameters.environmentLightParams.lightPresent = 0;
 
                 // 重新分配Light Task Buffer以及Geometry Instance to light buffer
                 if (_last_light_task_count != tasks.Count && tasks.Count > 0)
@@ -424,7 +429,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                     _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3, sizeof(TriangleLightDebug));
 
                     prepare_polymorphic_light = true; 
-                }
+                } 
 
                 // 重新分配网格灯用到的纹理
                 if (local_emissive_textures_cpu.Count > 0 && !_last_emissive_textures_cpu.SequenceEqual(local_emissive_textures_cpu))
@@ -433,14 +438,14 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                     
                     var template = local_emissive_textures_cpu[0];
                     _polymorphic_light_texture_array = new Texture2DArray(template.width, template.height,
-                        local_emissive_textures_cpu.Count, TextureFormat.DXT1, true);
+                        local_emissive_textures_cpu.Count, TextureFormat.DXT1, true); 
 
                     for (int j = 0; j < local_emissive_textures_cpu.Count; ++j)
                     {
                         var texture = local_emissive_textures_cpu[j];
                         Graphics.CopyTexture(texture, 0, _polymorphic_light_texture_array, j);
                     }
-                }
+                } 
                 // 退出play状态时，_polymorphic_light_texture_array会重置为null，但_last_emissive_textures_cpu会保持不变（不知道为什么）
                 // 在此手动做一下判断，如果_polymorphic_light_texture_array为null，则强制清除一次_last_emissive_textures_cpu，这样下一帧中会重新构建
                 else if (_polymorphic_light_texture_array == null)
@@ -462,14 +467,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                 // Dispatch Light Prepare Tasks.
                 if(true)
                 {
-                    _light_buffer_parameters.localLightBufferRegion.firstLightIndex = 0;
-                    _light_buffer_parameters.localLightBufferRegion.numLights = light_buffer_offset;
-                    _light_buffer_parameters.infiniteLightBufferRegion.firstLightIndex = 0;
-                    _light_buffer_parameters.infiniteLightBufferRegion.numLights = 0;
-                    _light_buffer_parameters.environmentLightParams.lightIndex = 0xffffffffu; // INVALID
-                    _light_buffer_parameters.environmentLightParams.lightPresent = 0;
-
-                    cmd.SetComputeIntParam(_prepare_light_cs, GpuParams.numTasks, _light_task_buffer_gpu.count);
+                    cmd.SetComputeIntParam(_prepare_light_cs, GpuParams.numTasks, tasks.Count);
                     cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.LightVertexBuffer, _merged_vertex_buffer_gpu);
                     cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.LightIndexBuffer, _merged_index_buffer_gpu);
                     cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.TaskBuffer, _light_task_buffer_gpu);
@@ -539,7 +537,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _resampling_constants_buffer?.Release(); _resampling_constants_buffer = null;
             _neighbor_offset_buffer?.Release(); _neighbor_offset_buffer = null;
             _light_reservoir_buffer_gpu?.Release(); _light_reservoir_buffer_gpu = null;
-            _scene_tlas?.Release(); _scene_tlas = null;
+            _scene_tlas?.Release(); _scene_tlas = null; 
         }
 
         private void FillResamplingConstants(RTXDISettings rtxdiSettings, int renderWidth, int renderHeight)

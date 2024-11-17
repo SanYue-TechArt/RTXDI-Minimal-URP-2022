@@ -141,6 +141,8 @@ Shader "Universal Render Pipeline/Unlit For Polymorphic Light"
             [shader("closesthit")]
             void ClosestHitShader(inout RayPayload payload : SV_RayPayload, AttributeData attributeData : SV_IntersectionAttributes)
             {
+                if(!payload.isBrdfLightTracing) return;
+                
                 IntersectionVertex vertex = (IntersectionVertex)0.0f;
                 GetCurrentIntersectionVertex(attributeData, vertex);
                 

@@ -84,9 +84,9 @@ void PrepareLights (uint dispatchThreadId : SV_DispatchThreadID, uint groupThrea
         indices[2] = LightIndexBuffer[3 * triangleIdx + 2];
         
         TriangleLightVertex vertices[3];
-        vertices[0] = LightVertexBuffer[task.lightBufferOffset + indices[0]];
-        vertices[1] = LightVertexBuffer[task.lightBufferOffset + indices[1]];
-        vertices[2] = LightVertexBuffer[task.lightBufferOffset + indices[2]];
+        vertices[0] = LightVertexBuffer[task.vertexOffset + indices[0]];
+        vertices[1] = LightVertexBuffer[task.vertexOffset + indices[1]];
+        vertices[2] = LightVertexBuffer[task.vertexOffset + indices[2]];
 
         float3 worldPos0 = mul(task.localToWorld, float4(vertices[0].position, 1.0)).xyz;
         float3 worldPos1 = mul(task.localToWorld, float4(vertices[1].position, 1.0)).xyz;
