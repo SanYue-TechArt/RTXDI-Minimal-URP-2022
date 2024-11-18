@@ -69,7 +69,7 @@ void RtxdiRayGen()
             }
         }
         
-        if(g_Const.enableResampling)
+        if(true)
         {
             float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
             mv                  *= DispatchRaysDimensions();
