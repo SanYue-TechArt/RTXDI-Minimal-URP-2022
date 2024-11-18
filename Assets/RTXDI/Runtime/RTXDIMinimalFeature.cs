@@ -42,8 +42,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             public uint2 radiance; // fp16x4
             public uint direction1; // oct-encoded
             public uint direction2; // oct-encoded
-            
-            public Vector4 debug;
         };
 
         [StructLayout(LayoutKind.Sequential)]
