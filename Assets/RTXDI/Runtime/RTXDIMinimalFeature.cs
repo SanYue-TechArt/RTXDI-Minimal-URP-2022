@@ -339,6 +339,12 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             }
 
             #endregion
+
+            if (tasks.Count <= 0)
+            {
+                _is_pass_executable = false;
+                return;
+            }
             
             // 更新prepare light上下文信息
             _prepare_light_context._task_count = tasks.Count;
@@ -732,6 +738,8 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
         private RTHandle _scene_color_copy;
         private RTHandle _input_rtxdi_lighting;
 
+        private bool _is_pass_executable;
+
         public LightingCompositePass()
         {
             _lighting_composite_ps = Resources.Load<Shader>("Shaders/LightingComposite");
@@ -747,6 +755,8 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
+            if (!_is_pass_executable) return;
+            
             var scene_color_copy_desc = cameraTextureDescriptor;
             scene_color_copy_desc.depthBufferBits = 0;
             RenderingUtils.ReAllocateIfNeeded(ref _scene_color_copy, scene_color_copy_desc);
@@ -754,7 +764,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            if (_input_rtxdi_lighting == null) return;
+            if (_input_rtxdi_lighting == null || !_is_pass_executable) return;
             
             var cmd = CommandBufferPool.Get("RTXDI Lighting Composite");
             var renderer = renderingData.cameraData.renderer;
@@ -773,7 +783,11 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             CommandBufferPool.Release(cmd);
         }
 
-        public void Setup(RTHandle rtxdiLighting) => _input_rtxdi_lighting = rtxdiLighting;
+        public void Setup(RTHandle rtxdiLighting, bool executable)
+        {
+            _input_rtxdi_lighting = rtxdiLighting;
+            _is_pass_executable = executable;
+        }
 
         public void Release()
         {
@@ -820,7 +834,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
         renderer.EnqueuePass(_history_gbuffer_pass);
 
         _lighting_composite_pass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
-        _lighting_composite_pass.Setup(_rtxdi_pass.GetShadingOutput());
+        _lighting_composite_pass.Setup(_rtxdi_pass.GetShadingOutput(), _rtxdi_pass.Executable());
         renderer.EnqueuePass(_lighting_composite_pass);
     }
 
