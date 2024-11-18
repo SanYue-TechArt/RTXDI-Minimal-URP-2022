@@ -385,6 +385,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             var light_reservoir_count = (int)_resampling_constants.restirDIReservoirBufferParams.reservoirArrayPitch * NUM_RESTIR_DI_RESERVOIR_BUFFERS;
             if (_prepare_light_context._last_light_reservoir_count != light_reservoir_count)
             {
+                _prepare_light_context._last_light_reservoir_count = light_reservoir_count;
                 _light_reservoir_buffer_gpu?.Release();
                 _light_reservoir_buffer_gpu = new ComputeBuffer(light_reservoir_count, sizeof(RTXDI_PackedDIReservoir));
             }
@@ -561,7 +562,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _resampling_constants.enableResampling =
                 IsHistoryGBufferReady() ? (rtxdiSettings.enableResampling.value ? 1u : 0u) : 0u;
             _resampling_constants.unbiasedMode = rtxdiSettings.unbiasedMode.value ? 1u : 0u;
-            _resampling_constants.inputBufferIndex = ~(_resampling_constants.frameIndex & 1u);
+            _resampling_constants.inputBufferIndex = (_resampling_constants.frameIndex & 1u) ^ 1;
             _resampling_constants.outputBufferIndex = _resampling_constants.frameIndex & 1u;
             
             // 将数据上载到GPU
