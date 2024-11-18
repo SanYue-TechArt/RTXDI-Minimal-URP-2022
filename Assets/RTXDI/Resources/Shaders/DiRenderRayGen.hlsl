@@ -71,12 +71,17 @@ void RtxdiRayGen()
         
         if(g_Const.enableResampling)
         {
-            float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
-            mv                  *= DispatchRaysDimensions();
-            float depthDiff     = LinearEyeDepth(LOAD_TEXTURE2D_X_LOD(_PreviousCameraDepthTexture, pixelPosition, 0).r, _ZBufferParams) - primarySurface.viewDepth;
-            float3 motionVector = float3(-mv, depthDiff);
+            float2 invScreenSize            = float2(1.0f / _ScreenParams.x, 1.0f / _ScreenParams.y);
+            PositionInputs positionInputs   = GetPositionInput(pixelPosition, invScreenSize, d, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
             
-            // TODO: 填充参数
+            float4 previousPositionVP   = mul(_PrevViewProjMatrix, float4(positionInputs.positionWS, 1.0));
+            float4 positionVP           = mul(UNITY_MATRIX_VP, float4(positionInputs.positionWS, 1.0));
+            float motionZ               = previousPositionVP.w - positionVP.w;
+            
+            float2 mv           = LOAD_TEXTURE2D_X_LOD(_MotionVectorTexture, pixelPosition, 0).xy;
+            mv.xy               *= DispatchRaysDimensions();
+            float3 motionVector = float3(-mv.xy, motionZ);
+            
             RTXDI_DISpatioTemporalResamplingParameters stparams;
             stparams.screenSpaceMotion              = motionVector;
             stparams.sourceBufferIndex              = g_Const.inputBufferIndex;
