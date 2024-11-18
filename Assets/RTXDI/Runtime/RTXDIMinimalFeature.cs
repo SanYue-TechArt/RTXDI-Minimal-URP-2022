@@ -276,6 +276,8 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
             // Low Diff Sequence
             InitializeNeighborOffsets();
+            
+            _prepare_light_context.Reset();
         }
 
         public override unsafe void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
@@ -348,8 +350,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                 _is_pass_executable = false;
                 return;
             }
-            
-            _prepare_light_context.Reset();
 
             // 更新prepare light上下文信息
             _prepare_light_context._task_count = tasks.Count;
@@ -373,11 +373,11 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             if (_prepare_light_context._last_light_task_count != tasks.Count && tasks.Count > 0)
             {
                 _prepare_light_context._last_light_task_count = tasks.Count;
-                _light_task_buffer_gpu?.Dispose();
+                _light_task_buffer_gpu?.Release();
                 _light_task_buffer_gpu = new ComputeBuffer(tasks.Count, sizeof(PrepareLightsTask));
                 
                 // Geometry Instance to light的数组大小是跟随Task一起变化的，所以无需额外的变量来跟踪
-                _geometry_instance_to_light_gpu?.Dispose();
+                _geometry_instance_to_light_gpu?.Release();
                 _geometry_instance_to_light_gpu = new ComputeBuffer(geometry_instance_to_light.Count, sizeof(uint));
             }
             _light_task_buffer_gpu?.SetData(tasks);
@@ -387,7 +387,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             var light_reservoir_count = (int)_resampling_constants.restirDIReservoirBufferParams.reservoirArrayPitch * NUM_RESTIR_DI_RESERVOIR_BUFFERS;
             if (_prepare_light_context._last_light_reservoir_count != light_reservoir_count)
             {
-                _light_reservoir_buffer_gpu?.Dispose();
+                _light_reservoir_buffer_gpu?.Release();
                 _light_reservoir_buffer_gpu = new ComputeBuffer(light_reservoir_count, sizeof(RTXDI_PackedDIReservoir));
             }
 
@@ -419,15 +419,15 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                 }
      
                 // 将合并后的cpu灯光数据上载到gpu
-                _merged_vertex_buffer_gpu?.Dispose();
+                _merged_vertex_buffer_gpu?.Release();
                 _merged_vertex_buffer_gpu = new ComputeBuffer(total_vertex_count, sizeof(PolymorphicLight.TriangleLightVertex));
                 _merged_vertex_buffer_gpu.SetData(merged_vertex_buffer_cpu);
 
-                _merged_index_buffer_gpu?.Dispose();
+                _merged_index_buffer_gpu?.Release();
                 _merged_index_buffer_gpu = new ComputeBuffer(total_index_count, sizeof(int));
                 _merged_index_buffer_gpu.SetData(merged_index_buffer_cpu);
 
-                _light_data_buffer_gpu?.Dispose();
+                _light_data_buffer_gpu?.Release();
                 _light_data_buffer_gpu = new ComputeBuffer(total_index_count / 3, sizeof(RAB_LightInfo));
             } 
 
@@ -520,7 +520,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _resampling_constants_buffer_gpu?.Release(); _resampling_constants_buffer_gpu = null;
             _neighbor_offset_buffer?.Release(); _neighbor_offset_buffer = null;
             _light_reservoir_buffer_gpu?.Release(); _light_reservoir_buffer_gpu = null;
-            _scene_tlas?.Release(); _scene_tlas = null; 
+            _scene_tlas?.Release(); _scene_tlas = null;
             _shading_output?.Release(); _shading_output = null;
         }
 
