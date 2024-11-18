@@ -148,8 +148,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
         private GraphicsBuffer _light_task_buffer_gpu = null;
         private GraphicsBuffer _light_data_buffer_gpu = null;
         private GraphicsBuffer _geometry_instance_to_light_gpu = null;
-
-        private GraphicsBuffer _triangle_light_debug_buffer_gpu = null;
+        
         private RTXDI_LightBufferParameters _light_buffer_parameters = new RTXDI_LightBufferParameters();
 
         private class PrepareLightContext
@@ -419,9 +418,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
 
                 _light_data_buffer_gpu?.Release();
                 _light_data_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3, sizeof(RAB_LightInfo));
-
-                _triangle_light_debug_buffer_gpu?.Release();
-                _triangle_light_debug_buffer_gpu = new GraphicsBuffer(GraphicsBuffer.Target.Structured, total_index_count / 3, sizeof(TriangleLightDebug));
             } 
 
             // 按需分配网格灯用到的纹理
@@ -438,12 +434,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                     var texture = local_emissive_textures_cpu[j];
                     Graphics.CopyTexture(texture, 0, _prepare_light_context._polymorphic_light_texture_array, j);
                 }
-            } 
-            // 退出play状态时，_polymorphic_light_texture_array会重置为null，但_last_emissive_textures_cpu会保持不变（不知道为什么）
-            // 在此手动做一下判断，如果_polymorphic_light_texture_array为null，则强制清除一次_last_emissive_textures_cpu，这样下一帧中会重新构建
-            else if (_prepare_light_context._polymorphic_light_texture_array == null)
-            {
-                _prepare_light_context._last_emissive_textures_cpu.Clear();
             }
 
             #endregion
@@ -465,8 +455,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                 cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.LightIndexBuffer, _merged_index_buffer_gpu);
                 cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.TaskBuffer, _light_task_buffer_gpu);
                 cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.LightDataBuffer, _light_data_buffer_gpu);
-                // TODO: Remove this.
-                cmd.SetComputeBufferParam(_prepare_light_cs, _prepare_light_kernel, "TriangleLightDebugBuffer", _triangle_light_debug_buffer_gpu);
                 cmd.SetComputeTextureParam(_prepare_light_cs, _prepare_light_kernel, GpuParams.EmissiveTextureArray, _prepare_light_context._polymorphic_light_texture_array);
                 cmd.DispatchCompute(_prepare_light_cs, _prepare_light_kernel,
                     Mathf.CeilToInt((float)_prepare_light_context._total_triangle_count / 256), 1, 1);
@@ -517,7 +505,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _merged_index_buffer_gpu?.Release(); _merged_index_buffer_gpu = null;
             _light_task_buffer_gpu?.Release(); _light_task_buffer_gpu = null;
             _light_data_buffer_gpu?.Release(); _light_data_buffer_gpu = null;
-            _triangle_light_debug_buffer_gpu?.Release(); _triangle_light_debug_buffer_gpu = null;
             _geometry_instance_to_light_gpu?.Release(); _geometry_instance_to_light_gpu = null;
             _resampling_constants_buffer_gpu?.Release(); _resampling_constants_buffer_gpu = null;
             _neighbor_offset_buffer?.Release(); _neighbor_offset_buffer = null;
@@ -595,26 +582,6 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
                 }
                 Debug.Log(msg);
             }
-
-            /*{
-                var triangle_light_debug_cpu = new TriangleLightDebug[_triangle_light_debug_buffer_gpu.count];
-                _triangle_light_debug_buffer_gpu.GetData(triangle_light_debug_cpu);
-
-                var msg = "";
-                var idx = 1;
-                foreach (var triangle in triangle_light_debug_cpu)
-                {
-                    msg += $"triangle{idx}: base={triangle.basePoint}, v1={triangle.v1}, v2={triangle.v2}," +
-                           $" edge1={triangle.edge1}, edge2={triangle.edge2}, radiance={triangle.radiance}\n\n";
-                    idx += 1;
-                }
-                Debug.Log(msg);
-
-                /#1#/ TODO: unity console不支持输出小数点后第三位数，以下变量将输出为 (0.01, 0.01, 0.01)
-                // 本例中使用的边长为1cm（0.01m in unity）的正方体的vertex position实际上是(0.005,0.005,0.005)，但输出只会变成(0.01, 0.01, 0.01)
-                var point = new Vector3(0.005f, 0.005f, 0.005f);
-                Debug.Log(point);#1#
-            }*/
         }
 
         private unsafe void InitializeNeighborOffsets()

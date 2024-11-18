@@ -7,21 +7,10 @@
 
 uint numTasks;
 
-struct TriangleLightDebug
-{
-    float3 base;
-    float3 v1;
-    float3 v2;
-    float3 edge1;
-    float3 edge2;
-    float3 radiance;
-};
-
 StructuredBuffer<PrepareLightsTask>     TaskBuffer;
 StructuredBuffer<TriangleLightVertex>   LightVertexBuffer;
 StructuredBuffer<int>                   LightIndexBuffer;
 RWStructuredBuffer<RAB_LightInfo>       LightDataBuffer;
-RWStructuredBuffer<TriangleLightDebug>       TriangleLightDebugBuffer;
 
 TEXTURE2D_ARRAY(EmissiveTextureArray); SAMPLER(sampler_LinearClamp);
 
@@ -74,8 +63,6 @@ void PrepareLights (uint dispatchThreadId : SV_DispatchThreadID, uint groupThrea
     uint triangleIdx = dispatchThreadId;
 
     RAB_LightInfo lightInfo = (RAB_LightInfo)0;
-
-    TriangleLightDebug triangle_light_debug = (TriangleLightDebug)0;
 
     {
         int indices[3];
@@ -156,17 +143,9 @@ void PrepareLights (uint dispatchThreadId : SV_DispatchThreadID, uint groupThrea
         triLight.edge2      = worldPos2 - worldPos0;
         triLight.radiance   = radiance;
 
-        triangle_light_debug.base       = worldPos0;
-        triangle_light_debug.v1         = worldPos1;
-        triangle_light_debug.v2         = worldPos2;
-        triangle_light_debug.edge1      = triangle_light_debug.v1 - triangle_light_debug.base;
-        triangle_light_debug.edge2      = worldPos2 - worldPos0;
-        triangle_light_debug.radiance   = triLight.radiance;
-
         lightInfo = triLight.Store();
     }
 
     const uint lightBufferPtr                   = dispatchThreadId;
     LightDataBuffer[lightBufferPtr]             = lightInfo;
-    TriangleLightDebugBuffer[lightBufferPtr]    = triangle_light_debug;
 }
