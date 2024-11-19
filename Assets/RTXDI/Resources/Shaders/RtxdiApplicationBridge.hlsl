@@ -262,7 +262,7 @@ RAB_Surface RAB_GetGBufferSurface(int2 pixelPosition, bool previousFrame)
     float2 positionNDC = float2((float)pixelPosition.x / _ScreenParams.x, (float)pixelPosition.y / _ScreenParams.y); 
 
     // TODO: 区分GeoNormal和PixelNormal？
-    surface.normal              = normalize(UnpackNormal(gbuffer2.xyz));
+    surface.normal              = normalize(RTXDI_UnpackNormal(gbuffer2.xyz, g_Const.useAccurateGBufferNormal));
     surface.geoNormal           = surface.normal;
     surface.diffuseAlbedo       = gbuffer0.rgb;
     surface.specularF0          = gbuffer1.rgb;

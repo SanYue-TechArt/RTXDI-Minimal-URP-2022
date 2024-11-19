@@ -181,4 +181,24 @@ float4 Unpack_RGBA8_SNORM(uint value)
     );
 }
 
+// 不开启Accurate G-Buffer normal时使用
+half3 UnpackRegularNormal(half3 pn)
+{
+    return pn;
+}
+
+// 开启Accurate G-Buffer normal时使用
+half3 UnpackOctNormal(half3 pn)
+{
+    half2 remappedOctNormalWS = Unpack888ToFloat2(pn);                // values between [ 0, +1]
+    half2 octNormalWS = remappedOctNormalWS.xy * 2.0h - 1.0h;         // values between [-1, +1]
+    return UnpackNormalOctQuadEncode(octNormalWS);                    // values between [-1, +1]
+}
+
+half3 RTXDI_UnpackNormal(half3 pn, uint useAccruateNormal)
+{
+    if(useAccruateNormal) return UnpackOctNormal(pn);
+    else return UnpackRegularNormal(pn);
+}
+
 #endif

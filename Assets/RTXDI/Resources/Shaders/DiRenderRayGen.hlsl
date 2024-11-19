@@ -19,7 +19,7 @@ void RtxdiRayGen()
     primarySurface.worldPos             = ComputeWorldSpacePosition(positionNDC, d, UNITY_MATRIX_I_VP);
     primarySurface.viewDir              = GetWorldSpaceNormalizeViewDir(primarySurface.worldPos);
     primarySurface.viewDepth            = LinearEyeDepth(d, _ZBufferParams);
-    primarySurface.normal               = normalize(UnpackNormal(gbuffer2.xyz));
+    primarySurface.normal               = normalize(RTXDI_UnpackNormal(gbuffer2.xyz, g_Const.useAccurateGBufferNormal));
     primarySurface.geoNormal            = primarySurface.normal;
     primarySurface.diffuseAlbedo        = gbuffer0.rgb;
     primarySurface.specularF0           = gbuffer1.rgb;

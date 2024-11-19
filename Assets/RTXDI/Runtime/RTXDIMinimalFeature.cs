@@ -98,7 +98,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             public uint frameIndex;
             public uint numInitialSamples;
             public uint numSpatialSamples;
-            public uint pad1;
+            public uint useAccurateGBufferNormal;
 
             public uint numInitialBRDFSamples;
             public float brdfCutoff;
@@ -553,7 +553,9 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _resampling_constants.frameIndex = (uint)Time.frameCount;
             _resampling_constants.numInitialSamples = (uint)rtxdiSettings.numInitialSamples.value;
             _resampling_constants.numSpatialSamples = (uint)rtxdiSettings.numSpatialSamples.value;
-            _resampling_constants.pad1 = 0;
+            var renderer_data = GetRendererDataWithinFeature();
+            var useAccurateNormal = renderer_data != null && renderer_data.accurateGbufferNormals;
+            _resampling_constants.useAccurateGBufferNormal = useAccurateNormal ? 1u : 0u;
 
             _resampling_constants.numInitialBRDFSamples = (uint)rtxdiSettings.numInitialBrdfSamples.value;
             _resampling_constants.brdfCutoff = rtxdiSettings.brdfCutoff.value;

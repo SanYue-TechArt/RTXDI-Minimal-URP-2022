@@ -31,7 +31,7 @@ struct ResamplingConstants
     uint frameIndex;
     uint numInitialSamples;
     uint numSpatialSamples;
-    uint pad1;
+    uint useAccurateGBufferNormal;
 
     uint numInitialBRDFSamples;
     float brdfCutoff;
