@@ -287,6 +287,7 @@ public sealed class RTXDIMinimalFeature : ScriptableRendererFeature
             _is_pass_executable &= _rtxdi_raytracing_shader != null;
             _is_pass_executable &= _prepare_light_cs != null;
             _is_pass_executable &= polyLights.Length > 0; // TODO: 为减少复杂性，目前只支持Polymorphic Light，Infinite Light以及Environment Light不受支持
+            _is_pass_executable &= SystemInfo.supportsRayTracing;
             if (!_is_pass_executable) return;
 
             #region 创建Prepare Lights Task并提供一些数量信息

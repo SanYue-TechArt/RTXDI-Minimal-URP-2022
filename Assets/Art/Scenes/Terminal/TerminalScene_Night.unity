@@ -8246,7 +8246,7 @@ GameObject:
   - component: {fileID: 694091815}
   - component: {fileID: 694091814}
   m_Layer: 0
-  m_Name: README
+  m_Name: README_ZH-CN
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8261,7 +8261,9 @@ TextMesh:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 694091813}
   m_Text: "\u4E3A\u4FDD\u8BC1\u6548\u679C\u6B63\u786E\uFF0C\u786E\u4FDD\uFF1A\n1.
-    \u573A\u666FShader\u5FC5\u987B\u662FURP Lit\n2. \u7528\u4E8EPolymorphic Light\u7684Shader\u5FC5\u987B\u662FUnlitForPolymorphicLight"
+    \u573A\u666FShader\u5FC5\u987B\u662FURP Lit\n2. \u7528\u4E8EPolymorphic Light\u7684Shader\u5FC5\u987B\u662FUnlitForPolymorphicLight\n3.
+    \u5F00\u542FDX12\n4. \u5982\u679C\u52A0\u5165\u81EA\u5B9A\u4E49\u7684\u7F51\u683C\u706F\uFF0C\u9700\u8981\u786E\u4FDD\u9876\u70B9\u5E03\u5C40\u548C\u793A\u4F8B\u7F51\u683C\u4FDD\u6301\u4E00\u81F4\n5.
+    \u5982\u679C\u53D1\u751F\u573A\u666F\u91CC\u5149\u7167\u6548\u679C\u9519\u4E71\uFF0CPlay\u4E00\u6B21\u518D\u9000\u51FA\u5373\u53EF\uFF08\u76EE\u524D\u4E0D\u77E5\u9053\u4EC0\u4E48bug\uFF09"
   m_OffsetZ: 0
   m_CharacterSize: 1
   m_LineSpacing: 1
@@ -8326,7 +8328,7 @@ Transform:
   m_GameObject: {fileID: 694091813}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 17.38, z: 7.33}
+  m_LocalPosition: {x: -28.1, y: 20.12, z: 7.33}
   m_LocalScale: {x: 1.1772422, y: 1.1772422, z: 1.1772422}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -21419,6 +21421,107 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1818384483134930436, guid: a4af472c77a9e40688ae7566b93ab7c2, type: 3}
   m_PrefabInstance: {fileID: 1874106866}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1878597501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1878597504}
+  - component: {fileID: 1878597503}
+  - component: {fileID: 1878597502}
+  m_Layer: 0
+  m_Name: README_EN-US
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!102 &1878597502
+TextMesh:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1878597501}
+  m_Text: "To ensure correct results :\n1. The scene Shader must be URP Lit\r\r\n2.
+    The Shader used for PolymorphicLight must be UnlitForPolymorphicLight\r\n3. Enable
+    DX12\r\n4. If you add custom polymorphic lights, make sure that the vertex layout
+    is consistent with this sample\n5. If the lighting effect in the scene is wrong,
+    Play once then exit (this bug is not found yet)"
+  m_OffsetZ: 0
+  m_CharacterSize: 1
+  m_LineSpacing: 1
+  m_Anchor: 4
+  m_Alignment: 1
+  m_TabSize: 4
+  m_FontSize: 0
+  m_FontStyle: 0
+  m_RichText: 1
+  m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Color:
+    serializedVersion: 2
+    rgba: 4294967295
+--- !u!23 &1878597503
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1878597501}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10100, guid: 0000000000000000e000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!4 &1878597504
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1878597501}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 37.77, y: 20.12, z: 7.33}
+  m_LocalScale: {x: 1.1772422, y: 1.1772422, z: 1.1772422}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1882836535
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -27488,3 +27591,4 @@ SceneRoots:
   - {fileID: 480433498}
   - {fileID: 1310950674}
   - {fileID: 694091816}
+  - {fileID: 1878597504}
