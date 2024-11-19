@@ -8263,7 +8263,8 @@ TextMesh:
   m_Text: "\u4E3A\u4FDD\u8BC1\u6548\u679C\u6B63\u786E\uFF0C\u786E\u4FDD\uFF1A\n1.
     \u573A\u666FShader\u5FC5\u987B\u662FURP Lit\n2. \u7528\u4E8EPolymorphic Light\u7684Shader\u5FC5\u987B\u662FUnlitForPolymorphicLight\n3.
     \u5F00\u542FDX12\n4. \u5982\u679C\u52A0\u5165\u81EA\u5B9A\u4E49\u7684\u7F51\u683C\u706F\uFF0C\u9700\u8981\u786E\u4FDD\u9876\u70B9\u5E03\u5C40\u548C\u793A\u4F8B\u7F51\u683C\u4FDD\u6301\u4E00\u81F4\n5.
-    \u5982\u679C\u53D1\u751F\u573A\u666F\u91CC\u5149\u7167\u6548\u679C\u9519\u4E71\uFF0CPlay\u4E00\u6B21\u518D\u9000\u51FA\u5373\u53EF\uFF08\u76EE\u524D\u4E0D\u77E5\u9053\u4EC0\u4E48bug\uFF09"
+    \u5982\u679C\u53D1\u751F\u573A\u666F\u91CC\u5149\u7167\u6548\u679C\u9519\u4E71\uFF0CPlay\u4E00\u6B21\u518D\u9000\u51FA\u5373\u53EF\uFF08\u76EE\u524D\u4E0D\u77E5\u9053\u4EC0\u4E48bug\uFF09\n6.
+    \u81EA\u53D1\u5149\u7EB9\u7406\u76EE\u524D\u4EC5\u4F9B\u6F14\u793A\uFF0C\u9650\u5236\u5F88\u5927\uFF0C\u7F51\u683C\u706F\u4E0A\u5E26\u7684\u6240\u6709\u81EA\u53D1\u5149\u7EB9\u7406\u5FC5\u987B\u62E5\u6709\u4E00\u81F4\u7684\u5927\u5C0F\u4E14\u683C\u5F0F\u4E3ADXT1"
   m_OffsetZ: 0
   m_CharacterSize: 1
   m_LineSpacing: 1
@@ -8328,7 +8329,7 @@ Transform:
   m_GameObject: {fileID: 694091813}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -28.1, y: 20.12, z: 7.33}
+  m_LocalPosition: {x: -35.9, y: 20.12, z: 7.33}
   m_LocalScale: {x: 1.1772422, y: 1.1772422, z: 1.1772422}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -21451,7 +21452,9 @@ TextMesh:
     The Shader used for PolymorphicLight must be UnlitForPolymorphicLight\r\n3. Enable
     DX12\r\n4. If you add custom polymorphic lights, make sure that the vertex layout
     is consistent with this sample\n5. If the lighting effect in the scene is wrong,
-    Play once then exit (this bug is not found yet)"
+    Play once then exit (this bug is not found yet)\n6. Emissive Texture is preview
+    and has many limitations for now, you must use same size and DXT1 format for
+    all emissive tex"
   m_OffsetZ: 0
   m_CharacterSize: 1
   m_LineSpacing: 1
@@ -21516,7 +21519,7 @@ Transform:
   m_GameObject: {fileID: 1878597501}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 37.77, y: 20.12, z: 7.33}
+  m_LocalPosition: {x: 47.6, y: 20.12, z: 7.33}
   m_LocalScale: {x: 1.1772422, y: 1.1772422, z: 1.1772422}
   m_ConstrainProportionsScale: 0
   m_Children: []
